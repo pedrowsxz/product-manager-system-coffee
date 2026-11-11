@@ -1,0 +1,23 @@
+@{
+    Layout = "/Views/Shared/_Layout.cshtml";
+    var current = ViewContext.RouteData.Values["page"]?.ToString();
+    string Active(string page) => current == page ? "active" : "";
+}
+<div class="page-header"><h1>Minha conta</h1></div>
+<div class="row g-4">
+    <div class="col-md-3">
+        <nav class="nav nav-pills flex-column">
+            <a class="nav-link @Active("/Account/Manage/Index")" asp-page="./Index">Perfil</a>
+            <a class="nav-link @Active("/Account/Manage/Email")" asp-page="./Email">Email</a>
+            <a class="nav-link @Active("/Account/Manage/ChangePassword")" asp-page="./ChangePassword">Senha</a>
+        </nav>
+    </div>
+    <div class="col-md-9">
+        <div class="panel form-narrow">
+            @RenderBody()
+        </div>
+    </div>
+</div>
+@section Scripts {
+    @await RenderSectionAsync("Scripts", required: false)
+}

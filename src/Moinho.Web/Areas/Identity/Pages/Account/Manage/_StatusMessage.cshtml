@@ -1,0 +1,6 @@
+@model string?
+@if (!string.IsNullOrEmpty(Model))
+{
+    var isError = Model.StartsWith("Erro");
+    <div class="alert @(isError ? "alert-danger" : "alert-success") py-2" role="alert">@Model</div>
+}

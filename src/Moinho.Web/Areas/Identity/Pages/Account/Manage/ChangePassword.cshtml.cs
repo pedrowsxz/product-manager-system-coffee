@@ -1,128 +1,86 @@
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-#nullable disable
-
-using System;
 using System.ComponentModel.DataAnnotations;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.Extensions.Logging;
 using Moinho.Web.Models;
 
-namespace Moinho.Web.Areas.Identity.Pages.Account.Manage
+namespace Moinho.Web.Areas.Identity.Pages.Account.Manage;
+
+// "Reset their password" from the brief, read as: change the password while signed in.
+public class ChangePasswordModel(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager) : PageModel
 {
-    public class ChangePasswordModel : PageModel
+    [BindProperty]
+    public InputModel Input { get; set; } = new();
+
+    [TempData]
+    public string? StatusMessage { get; set; }
+
+    public bool IsProtectedDemo { get; private set; }
+
+    public class InputModel
     {
-        private readonly UserManager<ApplicationUser> _userManager;
-        private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly ILogger<ChangePasswordModel> _logger;
+        [Required(ErrorMessage = "Informe a senha atual.")]
+        [DataType(DataType.Password)]
+        [Display(Name = "Senha atual")]
+        public string OldPassword { get; set; } = "";
 
-        public ChangePasswordModel(
-            UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager,
-            ILogger<ChangePasswordModel> logger)
+        [Required(ErrorMessage = "Informe a nova senha.")]
+        [StringLength(100, MinimumLength = 6, ErrorMessage = "A senha deve ter entre {2} e {1} caracteres.")]
+        [DataType(DataType.Password)]
+        [Display(Name = "Nova senha")]
+        public string NewPassword { get; set; } = "";
+
+        [DataType(DataType.Password)]
+        [Display(Name = "Confirme a nova senha")]
+        [Compare(nameof(NewPassword), ErrorMessage = "As senhas não conferem.")]
+        public string ConfirmPassword { get; set; } = "";
+    }
+
+    public async Task<IActionResult> OnGetAsync()
+    {
+        var user = await userManager.GetUserAsync(User);
+        if (user is null)
         {
-            _userManager = userManager;
-            _signInManager = signInManager;
-            _logger = logger;
+            return NotFound();
         }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        [BindProperty]
-        public InputModel Input { get; set; }
+        IsProtectedDemo = user.IsProtectedDemo;
+        return Page();
+    }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        [TempData]
-        public string StatusMessage { get; set; }
-
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        public class InputModel
+    public async Task<IActionResult> OnPostAsync()
+    {
+        var user = await userManager.GetUserAsync(User);
+        if (user is null)
         {
-            /// <summary>
-            ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-            ///     directly from your code. This API may change or be removed in future releases.
-            /// </summary>
-            [Required]
-            [DataType(DataType.Password)]
-            [Display(Name = "Current password")]
-            public string OldPassword { get; set; }
-
-            /// <summary>
-            ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-            ///     directly from your code. This API may change or be removed in future releases.
-            /// </summary>
-            [Required]
-            [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
-            [DataType(DataType.Password)]
-            [Display(Name = "New password")]
-            public string NewPassword { get; set; }
-
-            /// <summary>
-            ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-            ///     directly from your code. This API may change or be removed in future releases.
-            /// </summary>
-            [DataType(DataType.Password)]
-            [Display(Name = "Confirm new password")]
-            [Compare("NewPassword", ErrorMessage = "The new password and confirmation password do not match.")]
-            public string ConfirmPassword { get; set; }
+            return NotFound();
         }
 
-        public async Task<IActionResult> OnGetAsync()
+        IsProtectedDemo = user.IsProtectedDemo;
+        if (user.IsProtectedDemo)
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                return NotFound($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
-            }
-
-            var hasPassword = await _userManager.HasPasswordAsync(user);
-            if (!hasPassword)
-            {
-                return RedirectToPage("./SetPassword");
-            }
-
+            StatusMessage = "Erro: contas de demonstração não podem trocar a senha.";
+            return RedirectToPage();
+        }
+        if (!ModelState.IsValid)
+        {
             return Page();
         }
 
-        public async Task<IActionResult> OnPostAsync()
+        // Also changes the security stamp, so other sessions of this user are signed out.
+        var result = await userManager.ChangePasswordAsync(user, Input.OldPassword, Input.NewPassword);
+        if (!result.Succeeded)
         {
-            if (!ModelState.IsValid)
+            foreach (var error in result.Errors)
             {
-                return Page();
+                ModelState.AddModelError(string.Empty, error.Description);
             }
-
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                return NotFound($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
-            }
-
-            var changePasswordResult = await _userManager.ChangePasswordAsync(user, Input.OldPassword, Input.NewPassword);
-            if (!changePasswordResult.Succeeded)
-            {
-                foreach (var error in changePasswordResult.Errors)
-                {
-                    ModelState.AddModelError(string.Empty, error.Description);
-                }
-                return Page();
-            }
-
-            await _signInManager.RefreshSignInAsync(user);
-            _logger.LogInformation("User changed their password successfully.");
-            StatusMessage = "Your password has been changed.";
-
-            return RedirectToPage();
+            return Page();
         }
+
+        // Re-issue this browser's cookie with the new stamp so it isn't signed out too.
+        await signInManager.RefreshSignInAsync(user);
+        StatusMessage = "Senha alterada.";
+        return RedirectToPage();
     }
 }

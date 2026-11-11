@@ -1,8 +1,15 @@
-﻿@page
+@page
 @model ConfirmEmailChangeModel
 @{
-    ViewData["Title"] = "Confirm email change";
+    ViewData["Title"] = "Troca de email";
 }
-
-<h1>@ViewData["Title"]</h1>
-<partial name="_StatusMessage" model="Model.StatusMessage" />
+<h1>Troca de email</h1>
+@if (Model.Succeeded)
+{
+    <div class="alert alert-success">Email alterado com sucesso. Use o novo endereço para entrar.</div>
+}
+else
+{
+    <div class="alert alert-danger">Não foi possível trocar o email. O link pode ter expirado ou o endereço já estar em uso.</div>
+}
+<a class="btn btn-outline-primary" href="/">Voltar ao início</a>

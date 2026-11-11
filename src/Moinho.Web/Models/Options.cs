@@ -13,3 +13,20 @@ public class DemoOptions
     public bool EnableErrorSimulation { get; set; }
     public bool NightlyReset { get; set; }
 }
+
+public class EmailOptions
+{
+    public string Host { get; set; } = "";
+    public int Port { get; set; } = 587;
+    public string? User { get; set; }
+    public string? Password { get; set; }
+    public string From { get; set; } = "";
+    public bool UseStartTls { get; set; } = true;
+}
+
+public class RateLimitOptions
+{
+    // POSTs that send email (register, forgot password, resend confirmation, ...) per IP per window.
+    public int EmailPermitLimit { get; set; } = 5;
+    public int EmailWindowMinutes { get; set; } = 15;
+}

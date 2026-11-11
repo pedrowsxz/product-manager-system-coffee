@@ -1,8 +1,16 @@
-﻿@page
+@page
 @model ConfirmEmailModel
 @{
-    ViewData["Title"] = "Confirm email";
+    ViewData["Title"] = "Confirmação de email";
 }
-
-<h1>@ViewData["Title"]</h1>
-<partial name="_StatusMessage" model="Model.StatusMessage" />
+<h1>Confirmação de email</h1>
+@if (Model.Succeeded)
+{
+    <div class="alert alert-success">Email confirmado! Você já pode entrar.</div>
+    <a class="btn btn-primary w-100" asp-page="./Login">Entrar</a>
+}
+else
+{
+    <div class="alert alert-danger">Link inválido ou expirado.</div>
+    <a class="btn btn-outline-primary" asp-page="./ResendEmailConfirmation">Reenviar confirmação</a>
+}

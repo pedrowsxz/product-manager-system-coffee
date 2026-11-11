@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moinho.Web.Data;
 using Moinho.Web.Models;
 
@@ -17,6 +19,8 @@ public class MoinhoFactory(SqlServerFixture sql) : WebApplicationFactory<Program
 
     private readonly string _database = "moinho_" + Guid.NewGuid().ToString("N");
 
+    public FakeEmailSender Emails { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -26,12 +30,17 @@ public class MoinhoFactory(SqlServerFixture sql) : WebApplicationFactory<Program
         builder.UseSetting("Demo:Enabled", "true");
         builder.UseSetting("Demo:EnableErrorSimulation", "true");
         builder.UseSetting("Demo:NightlyReset", "false");
-        builder.ConfigureServices(ConfigureTestServices);
+        builder.UseSetting("RateLimits:EmailPermitLimit", RateLimit.ToString());
+        builder.UseSetting("Serilog:MinimumLevel:Default", "Warning");
+        builder.ConfigureServices(services =>
+        {
+            services.RemoveAll<IEmailSender>();
+            services.AddSingleton<IEmailSender>(Emails);
+        });
     }
 
-    protected virtual void ConfigureTestServices(IServiceCollection services)
-    {
-    }
+    // High by default: every test request comes from the same (empty) client IP.
+    protected virtual int RateLimit => 1000;
 
     public HttpClient CreateBrowser() => CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 

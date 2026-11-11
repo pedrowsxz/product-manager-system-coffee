@@ -16,3 +16,24 @@
 
 Notes
 - On this WSL machine SQL Server takes ~2 min to start and ~11 s per `CREATE DATABASE`, so a test run has a fixed ~2 min cost.
+
+## Stage 2: Email and account flows ✅
+
+- `SmtpEmailSender` (MailKit 5, implements the non-generic `IEmailSender` the scaffolded pages use) with a plain-text alternative derived from the HTML.
+  - MailKit 5 changed `SmtpClient.SendAsync` to take a `SendRequest`; checked against the package's XML docs.
+- `EmailTemplates` (pt-BR: confirmation, email change, reset, invitation) and `AccountEmails`, which builds the token links with `LinkGenerator` and logs failures at Error without the link or token.
+- Identity options: confirmed account required, lockout 5 tries / 10 min, unique email, pt-BR `IdentityErrorDescriber`.
+  - A second Data Protection token provider gives confirmation and email-change links 24 h; reset and invitation links keep 2 h.
+- `SecurityStampValidatorOptions.ValidationInterval = TimeSpan.Zero`.
+- 403 is returned as a status code (friendly page) instead of a redirect to `AccessDenied`.
+- Forwarded headers (For/Proto/Host); trusted networks come from `ForwardedHeaders:KnownNetworks`.
+- Rate limiter policy `email` (POST only, per IP, 5 per 15 min by default) on Register, ForgotPassword, ResendEmailConfirmation and Manage/Email.
+- Data Protection keys persisted to `DataProtection:KeysPath` (a Docker volume).
+- Identity route audit: a page route convention removes every Identity UI page not in `IdentityPages.Used`.
+- Pages rewritten in pt-BR with these behaviour changes:
+  - Register answers the same for an already-registered email and sends nothing, so it can't be used to discover accounts.
+  - RegisterConfirmation is a static page (the scaffold showed the confirmation link and returned 404 for unknown emails).
+  - The 2FA, external-login and phone-number code paths were removed.
+  - Protected demo accounts: ChangePassword, Manage/Email, ForgotPassword, ResetPassword and ConfirmEmailChange all refuse them.
+- Tests (35 total): register / confirm / login, refused before confirmation, duplicate register, forgot / reset (the old password stops working), same response for unknown emails, change password, demo protection, email change, email failure, forwarded host in links, unused routes return 404, rate limit.
+- Checked by hand on the Docker stack: register → Mailpit → confirm → login; forgot → Mailpit → reset; no token in the container logs.

@@ -5,18 +5,39 @@ namespace Moinho.Tests.Infrastructure;
 
 public static partial class HttpClientExtensions
 {
-    [GeneratedRegex("name=\"__RequestVerificationToken\" type=\"hidden\" value=\"([^\"]+)\"")]
-    private static partial Regex AntiforgeryToken();
+    [GeneratedRegex("<input[^>]*type=\"hidden\"[^>]*>")]
+    private static partial Regex HiddenInput();
 
-    // GETs the page that holds the form (to get its antiforgery token + cookie), then POSTs the form.
+    [GeneratedRegex("name=\"([^\"]+)\"")]
+    private static partial Regex NameAttribute();
+
+    [GeneratedRegex("value=\"([^\"]*)\"")]
+    private static partial Regex ValueAttribute();
+
+    // Behaves like a browser: GETs the page holding the form, keeps its hidden fields (antiforgery
+    // token, reset code, ...), adds the given fields and POSTs. Only the first form's fields are used
+    // when a name repeats.
     public static async Task<HttpResponseMessage> PostFormAsync(this HttpClient client, string formPage, Dictionary<string, string> fields, string? postUrl = null)
     {
         var page = await client.GetAsync(formPage);
         var html = await page.Content.ReadAsStringAsync();
-        var token = AntiforgeryToken().Match(html);
-        Assert.True(token.Success, $"Sem token antiforgery em {formPage} (status {(int)page.StatusCode})");
-        fields["__RequestVerificationToken"] = WebUtility.HtmlDecode(token.Groups[1].Value);
-        return await client.PostAsync(postUrl ?? formPage, new FormUrlEncodedContent(fields));
+
+        var form = new Dictionary<string, string>();
+        foreach (Match input in HiddenInput().Matches(html))
+        {
+            var name = NameAttribute().Match(input.Value);
+            if (name.Success && !form.ContainsKey(name.Groups[1].Value))
+            {
+                form[name.Groups[1].Value] = WebUtility.HtmlDecode(ValueAttribute().Match(input.Value).Groups[1].Value);
+            }
+        }
+        Assert.True(form.ContainsKey("__RequestVerificationToken"), $"Sem token antiforgery em {formPage} (status {(int)page.StatusCode})");
+
+        foreach (var (key, value) in fields)
+        {
+            form[key] = value;
+        }
+        return await client.PostAsync(postUrl ?? formPage, new FormUrlEncodedContent(form));
     }
 
     public static Task<HttpResponseMessage> LoginAsync(this HttpClient client, string email, string password) =>
