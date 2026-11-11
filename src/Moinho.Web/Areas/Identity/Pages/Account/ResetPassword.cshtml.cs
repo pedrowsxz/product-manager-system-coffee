@@ -1,11 +1,10 @@
 using System.ComponentModel.DataAnnotations;
-using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.WebUtilities;
 using Moinho.Web.Models;
+using Moinho.Web.Services;
 
 namespace Moinho.Web.Areas.Identity.Pages.Account;
 
@@ -61,13 +60,14 @@ public class ResetPasswordModel(UserManager<ApplicationUser> userManager) : Page
         }
 
         var user = await userManager.FindByEmailAsync(Input.Email);
-        if (user is null || user.IsProtectedDemo)
+        var token = AccountEmails.Decode(Input.Code);
+        if (user is null || user.IsProtectedDemo || token is null)
         {
-            // Don't reveal whether the account exists.
-            return RedirectToPage("./ResetPasswordConfirmation");
+            // Same answer as a wrong or expired link, so the form doesn't reveal which emails exist.
+            ModelState.AddModelError(string.Empty, userManager.ErrorDescriber.InvalidToken().Description);
+            return Page();
         }
 
-        var token = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(Input.Code));
         // Also changes the security stamp, which signs the user out everywhere else.
         var result = await userManager.ResetPasswordAsync(user, token, Input.Password);
         if (result.Succeeded)

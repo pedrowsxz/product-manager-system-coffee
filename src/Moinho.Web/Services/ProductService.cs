@@ -36,7 +36,7 @@ public class ProductService(AppDbContext db, TimeProvider time)
         };
 
         var total = await products.CountAsync();
-        var page = Math.Max(1, query.Page);
+        var page = Math.Clamp(query.Page, 1, 10_000); // a huge page number would overflow Skip()
         var items = await ordered
             .ThenBy(p => p.Id) // stable order across pages
             .Skip((page - 1) * ProductListQuery.PageSize)

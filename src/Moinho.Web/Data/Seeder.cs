@@ -90,7 +90,7 @@ public class Seeder(
         {
             var first = faker.Name.FirstName();
             var last = faker.Name.LastName();
-            var email = $"{Slug(first)}.{Slug(last)}@moinho.app";
+            var email = $"{Slug(first)}.{Slug(last)}@moinho.test";
             if (!usedEmails.Add(email))
             {
                 continue;

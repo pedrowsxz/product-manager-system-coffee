@@ -1,10 +1,9 @@
-using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.WebUtilities;
 using Moinho.Web.Models;
+using Moinho.Web.Services;
 
 namespace Moinho.Web.Areas.Identity.Pages.Account;
 
@@ -28,8 +27,8 @@ public class ConfirmEmailChangeModel(UserManager<ApplicationUser> userManager, S
             return Page();
         }
 
-        var token = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code));
-        if (!(await userManager.ChangeEmailAsync(user, email, token)).Succeeded)
+        var token = AccountEmails.Decode(code);
+        if (token is null || !(await userManager.ChangeEmailAsync(user, email, token)).Succeeded)
         {
             return Page();
         }
@@ -40,7 +39,11 @@ public class ConfirmEmailChangeModel(UserManager<ApplicationUser> userManager, S
             return Page();
         }
 
-        await signInManager.RefreshSignInAsync(user);
+        // Re-issue the cookie only if this browser is signed in as this user.
+        if (userManager.GetUserId(User) == user.Id)
+        {
+            await signInManager.RefreshSignInAsync(user);
+        }
         Succeeded = true;
         return Page();
     }

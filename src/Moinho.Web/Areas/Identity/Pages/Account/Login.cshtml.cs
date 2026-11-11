@@ -50,7 +50,8 @@ public class LoginModel(SignInManager<ApplicationUser> signInManager, IOptions<D
         var result = await signInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: true);
         if (result.Succeeded)
         {
-            return LocalRedirect(ReturnUrl);
+            // Only redirect inside this site (an absolute returnUrl would be an open redirect).
+            return LocalRedirect(Url.IsLocalUrl(ReturnUrl) ? ReturnUrl : "~/");
         }
         if (result.IsLockedOut)
         {

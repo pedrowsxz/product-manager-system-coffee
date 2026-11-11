@@ -53,6 +53,20 @@ public class AccountEmails(
 
     private static string Encode(string token) => WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
 
+    // Reverses Encode. A tampered or truncated link returns null (treated as an invalid token)
+    // instead of throwing, which would be a 500 and an error-log row per bad request.
+    public static string? Decode(string code)
+    {
+        try
+        {
+            return Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code));
+        }
+        catch (FormatException)
+        {
+            return null;
+        }
+    }
+
     private async Task<bool> SendAsync(ApplicationUser user, string to, EmailContent email, string kind)
     {
         try

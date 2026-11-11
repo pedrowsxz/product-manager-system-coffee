@@ -65,7 +65,7 @@ public class StaffController(StaffService staff, UserManager<ApplicationUser> us
     }
 
     [HttpPost("{id}/Editar")]
-    [EnableRateLimiting(RateLimitPolicies.Email)]
+    [EnableRateLimiting(RateLimitPolicies.AdminEdit)]
     public async Task<IActionResult> Edit(string id, StaffEditViewModel form)
     {
         var row = await staff.GetAsync(id);

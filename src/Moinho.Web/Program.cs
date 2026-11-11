@@ -121,6 +121,12 @@ try
         {
             options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(network));
         }
+        // In production, only accept the public domain as X-Forwarded-Host, so nobody can make
+        // the reset links in our emails point at their own site.
+        foreach (var host in config.GetSection("ForwardedHeaders:AllowedHosts").Get<string[]>() ?? [])
+        {
+            options.AllowedHosts.Add(host);
+        }
     });
 
     // ---- Rate limiting ----
@@ -131,6 +137,7 @@ try
         var limits = config.GetSection("RateLimits").Get<RateLimitOptions>() ?? new RateLimitOptions();
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
         options.AddPolicy(RateLimitPolicies.Email, context => PostsPerIp(context, limits.EmailPermitLimit, limits.EmailWindowMinutes));
+        options.AddPolicy(RateLimitPolicies.AdminEdit, context => PostsPerIp(context, limits.AdminEditPermitLimit, limits.AdminEditWindowMinutes));
         options.AddPolicy(RateLimitPolicies.DemoLogin, context => PostsPerIp(context, limits.DemoLoginPermitLimit, limits.DemoLoginWindowMinutes));
 
         // Counts POSTs per client IP in a fixed window; GETs (just viewing the form) are never limited.

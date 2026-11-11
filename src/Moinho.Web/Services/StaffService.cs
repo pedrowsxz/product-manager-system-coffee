@@ -55,7 +55,7 @@ public class StaffService(
         };
 
         var total = await users.CountAsync();
-        var page = Math.Max(1, query.Page);
+        var page = Math.Clamp(query.Page, 1, 10_000); // a huge page number would overflow Skip()
         var pageOfUsers = await users
             .OrderBy(u => u.FullName).ThenBy(u => u.Id)
             .Skip((page - 1) * StaffListQuery.PageSize)
@@ -134,6 +134,7 @@ public class StaffService(
         var currentRole = await RoleOfAsync(user);
         var isSelf = user.Id == actingAdminId;
         var demoting = currentRole == Roles.Admin && form.Role != Roles.Admin;
+        var roleChanged = currentRole != form.Role;
         var deactivating = !form.IsActive && user.LockoutEnd != InactiveLockoutEnd;
         var emailChanged = !string.Equals(form.Email.Trim(), user.Email, StringComparison.OrdinalIgnoreCase);
 
@@ -146,19 +147,24 @@ public class StaffService(
         {
             return StaffResult.Fail("Você não pode desativar a própria conta.", nameof(form.IsActive));
         }
-
-        // Rule 2: protected accounts (demo accounts and the seeded admin) keep their role and access.
-        if (IsProtected(user) && (demoting || deactivating))
+        // Changing an email here signs the person out until they confirm it; for your own account
+        // use Minha conta → Email, which only switches after the new address is confirmed.
+        if (isSelf && emailChanged)
         {
-            return StaffResult.Fail("Esta conta é protegida: não pode ser rebaixada nem desativada.");
-        }
-        if (user.IsProtectedDemo && emailChanged)
-        {
-            return StaffResult.Fail("Contas de demonstração não podem trocar de email.", nameof(form.Email));
+            return StaffResult.Fail("Para trocar o seu próprio email, use Minha conta → Email.", nameof(form.Email));
         }
 
-        // Rule 3: never leave the store without an active admin.
-        if ((demoting || deactivating) && currentRole == Roles.Admin && await CountOtherActiveAdminsAsync(user.Id) == 0)
+        // Rule 2: protected accounts (demo accounts and the seeded admin) keep their role, email and
+        // access. Email matters too: whoever controls the address can reset the password.
+        if (IsProtected(user) && (roleChanged || deactivating || emailChanged))
+        {
+            return StaffResult.Fail("Esta conta é protegida: perfil, email e situação não podem ser alterados.");
+        }
+
+        // Rule 3: never leave the store without an active admin. An email change also counts:
+        // the admin can't sign in again until the new address is confirmed.
+        if ((demoting || deactivating || emailChanged) && currentRole == Roles.Admin && IsActive(user)
+            && await CountOtherActiveAdminsAsync(user.Id) == 0)
         {
             return StaffResult.Fail("Este é o último administrador ativo. Promova outra pessoa antes.");
         }
@@ -181,7 +187,7 @@ public class StaffService(
             Check(await userManager.SetUserNameAsync(user, email));
         }
 
-        if (currentRole != form.Role)
+        if (roleChanged)
         {
             if (currentRole != "")
             {

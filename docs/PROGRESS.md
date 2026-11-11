@@ -108,3 +108,30 @@ Notes
 - **Docs:** README (pt-BR, requirement and job tables, Mermaid flow, the disabled Identity routes, known limits, the Reflexão left for the author with 5 questions), ADRs 0001–0006, `docs/STUDY_GUIDE.md` (pt-BR, line-by-line core logic, demo script, 17 interview questions).
 - **Screenshots** captured with headless Chromium (Playwright 1.64.0 from the scratchpad, reusing an already-installed browser build; nothing added to the repo): login, products, validation, panel, team, error page, logs, Mailpit email, dark mode, phone.
 - Checked: a fresh `git clone` + `docker compose up --build` serves the app with CSS (run on alternate ports because this machine already uses 8080/1433). 84 tests green, 0 build warnings.
+
+## Final review (fresh subagent) and fixes ✅
+
+An independent review that hadn't seen the build process found these. All fixed, 92 tests green:
+
+1. **High:** the real admin could be taken over through an email change, and the demo admin could promote `equipe.demo` to Admin.
+   - Fix: protected accounts can't change role (in either direction), email or status.
+   - Tests: changing the real admin's email, promoting the Staff demo.
+2. **ResetPassword enumeration:** an unknown email redirected, while a known one showed "link inválido". Now both show the invalid-link message. Test added.
+3. **Tampered link codes** (`code=@@@`) threw `FormatException`, giving a 500 and an ErrorLogs row per request. `AccountEmails.Decode` now returns null, treated as an invalid token. Tests added.
+4. **Last-admin rule and email changes:** an email change now counts as taking an admin out of action. Changing your own email from the Equipe screen is blocked (Manage/Email confirms first). Test added.
+5. **Running from the IDE:** `appsettings.Development.json` was missing its `Email` section (Mailpit `localhost:1025`).
+6. **Staff edit rate limit:** edits now have their own, looser limit (`admin-edit`, 30 per 15 min) instead of sharing the 5-per-15-min email bucket.
+7. **Absolute `returnUrl`:** Login and Logout now check it with `Url.IsLocalUrl` (it used to cause a 500). Test added.
+8. **`ConfirmEmailChange`** only refreshes the cookie when this browser is signed in as that user.
+9. **Forwarded host:** `ForwardedHeaders:AllowedHosts` is set to `DOMAIN` in production, so reset links can't be pointed at another host.
+10. Page numbers are clamped to 1–10,000 (a huge value overflowed `Skip`).
+11. Removed the unused `_LoginPartial` and the empty `site.js`. Explained the Identity `_ValidationScriptsPartial` override and `dotnet-tools.json`.
+12. Docs corrected:
+    - the security stamp check reloads the user and roles on every request (STUDY_GUIDE, ADR 0003);
+    - unused Identity routes return 404 to signed-in users (README, ADR 0001);
+    - the protection rules (README, ADR 0006).
+13. Seed and demo emails moved to the reserved `.test` domain, so no real mail reaches someone else's domain. Demo accounts can't rename themselves.
+
+Not changed:
+- `SmtpEmailSender.ToPlainText` keeps its four small regexes; that's the price of a plain-text alternative without another package.
+- PROGRESS.md stays, because the spec asks for it.

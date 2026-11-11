@@ -1,10 +1,9 @@
-using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.WebUtilities;
 using Moinho.Web.Models;
+using Moinho.Web.Services;
 
 namespace Moinho.Web.Areas.Identity.Pages.Account;
 
@@ -21,9 +20,9 @@ public class ConfirmEmailModel(UserManager<ApplicationUser> userManager) : PageM
         }
 
         var user = await userManager.FindByIdAsync(userId);
-        if (user is not null)
+        var token = AccountEmails.Decode(code);
+        if (user is not null && token is not null)
         {
-            var token = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code));
             Succeeded = (await userManager.ConfirmEmailAsync(user, token)).Succeeded;
         }
         return Page();

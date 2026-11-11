@@ -42,6 +42,7 @@ services:
       DataProtection__KeysPath: /keys
       # Trust X-Forwarded-* only from Caddy's network (fixed below), so email links use the public host.
       ForwardedHeaders__KnownNetworks__0: 172.30.0.0/24
+      ForwardedHeaders__AllowedHosts__0: ${DOMAIN}
     volumes:
       - keys:/keys # Data Protection keys: logins, antiforgery and emailed links survive redeploys
     depends_on:

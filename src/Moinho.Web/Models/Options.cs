@@ -30,6 +30,10 @@ public class RateLimitOptions
     public int EmailPermitLimit { get; set; } = 5;
     public int EmailWindowMinutes { get; set; } = 15;
 
+    // Admin staff-edit POSTs per IP per window.
+    public int AdminEditPermitLimit { get; set; } = 30;
+    public int AdminEditWindowMinutes { get; set; } = 15;
+
     // Demo sign-in POSTs per IP per window.
     public int DemoLoginPermitLimit { get; set; } = 10;
     public int DemoLoginWindowMinutes { get; set; } = 10;

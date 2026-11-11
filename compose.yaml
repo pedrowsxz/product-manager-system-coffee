@@ -37,9 +37,9 @@ services:
       ConnectionStrings__Default: "Server=sqlserver,1433;Database=Moinho;User Id=sa;Password=${MSSQL_SA_PASSWORD:-Moinho_Dev_2026!};TrustServerCertificate=True"
       Email__Host: mailpit
       Email__Port: "1025"
-      Email__From: "Moinho <nao-responda@moinho.app>"
+      Email__From: "Moinho <nao-responda@moinho.test>"
       Email__UseStartTls: "false"
-      Seed__AdminEmail: ${ADMIN_EMAIL:-admin@moinho.app}
+      Seed__AdminEmail: ${ADMIN_EMAIL:-admin@moinho.test}
       Seed__AdminPassword: ${ADMIN_PASSWORD:-Admin_Dev_2026!}
       Demo__Enabled: "true"
       Demo__EnableErrorSimulation: "true"

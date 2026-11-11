@@ -89,8 +89,46 @@ public class StaffRulesTests(MoinhoFactory factory) : IClassFixture<MoinhoFactor
 
         var response = await EditAsync(client, id, EditForm(await ReloadAsync(id), Roles.Staff, email: "outro@teste.local"));
 
-        Assert.Contains("Contas de demonstração não podem trocar de email.", await response.Content.ReadAsStringAsync());
+        Assert.Contains("Esta conta é protegida", await response.Content.ReadAsStringAsync());
         Assert.Equal(DemoAccounts.StaffEmail, (await ReloadAsync(id)).Email);
+    }
+
+    [Fact]
+    public async Task Real_admin_email_cannot_be_changed_by_another_admin()
+    {
+        var admin = await factory.CreateUserAsync(Roles.Admin);
+        var browser = await factory.CreateBrowser().LoggedInAsync(admin.Email!);
+        var id = await IdOfAsync(MoinhoFactory.AdminEmail);
+
+        var response = await EditAsync(browser, id, EditForm(await ReloadAsync(id), Roles.Admin, email: "atacante@teste.local"));
+
+        Assert.Contains("Esta conta é protegida", await response.Content.ReadAsStringAsync());
+        Assert.Equal(MoinhoFactory.AdminEmail, (await ReloadAsync(id)).Email);
+        Assert.Equal(0, factory.Emails.CountTo("atacante@teste.local"));
+    }
+
+    [Fact]
+    public async Task Protected_staff_demo_account_cannot_be_promoted_to_Admin()
+    {
+        var admin = await factory.CreateUserAsync(Roles.Admin);
+        var browser = await factory.CreateBrowser().LoggedInAsync(admin.Email!);
+        var id = await IdOfAsync(DemoAccounts.StaffEmail);
+
+        await EditAsync(browser, id, EditForm(await ReloadAsync(id), Roles.Admin));
+
+        Assert.Equal([Roles.Staff], await RolesOfAsync(id));
+    }
+
+    [Fact]
+    public async Task Admin_cannot_change_their_own_email_from_the_staff_screen()
+    {
+        var admin = await factory.CreateUserAsync(Roles.Admin);
+        var browser = await factory.CreateBrowser().LoggedInAsync(admin.Email!);
+
+        var response = await EditAsync(browser, admin.Id, EditForm(admin, Roles.Admin, email: "novo.eu@teste.local"));
+
+        Assert.Contains("use Minha conta", await response.Content.ReadAsStringAsync());
+        Assert.True((await ReloadAsync(admin.Id)).EmailConfirmed);
     }
 
     [Fact]

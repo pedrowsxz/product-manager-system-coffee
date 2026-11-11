@@ -44,6 +44,11 @@ public class IndexModel(UserManager<ApplicationUser> userManager) : PageModel
         {
             return NotFound();
         }
+        if (user.IsProtectedDemo)
+        {
+            StatusMessage = "Erro: contas de demonstração não podem ser alteradas.";
+            return RedirectToPage();
+        }
         if (!ModelState.IsValid)
         {
             Email = user.Email ?? "";

@@ -94,7 +94,7 @@ docker compose down -v      # apaga o volume do SQL Server; o próximo "up" recr
 |---|---|---|
 | Admin (demo) | botão "Entrar como Admin (demo)" | Admin, protegida |
 | Equipe (demo) | botão "Entrar como Equipe (demo)" | Staff, protegida |
-| Admin real | `admin@moinho.app` / `Admin_Dev_2026!` (dev; mude em `.env`) | Admin, protegida contra rebaixamento |
+| Admin real | `admin@moinho.test` / `Admin_Dev_2026!` (dev; mude em `.env`) | Admin, protegida (perfil, email e situação não mudam pela área Admin) |
 | Sua conta | "Cadastre-se" → confirme pelo email no Mailpit | Staff |
 
 ---
@@ -117,7 +117,8 @@ docker compose down -v      # apaga o volume do SQL Server; o próximo "up" recr
 - **Equipe:** busca, filtros por perfil e situação, convite, edição e exclusão. Regras (em `StaffService`):
   - ninguém remove o próprio acesso (rebaixar, desativar ou excluir a si mesmo);
   - o **último Admin ativo** não pode ser rebaixado, desativado ou excluído (checado dentro de uma transação serializável);
-  - contas protegidas (as demos e o admin real) não podem ser rebaixadas, desativadas ou excluídas, e as demos não trocam email nem senha;
+  - contas protegidas (as demos e o admin real) não mudam de perfil, email ou situação e não podem ser excluídas; as demos também não trocam senha nem nome;
+  - ninguém troca o próprio email pela tela da Equipe (use Minha conta → Email, que só troca depois da confirmação);
   - quem é adicionado pelo admin recebe um **convite** para definir a própria senha ([ADR 0004](docs/adr/0004-staff-invitations-instead-of-admin-set-passwords.md));
   - "Inativo" é um bloqueio sem prazo (`LockoutEnd = DateTimeOffset.MaxValue`).
 - **Logs:** lista paginada com filtro por nível, período e TraceId; detalhe com mensagem, exceção e propriedades. O botão **Simular erro** (só na demo) lança uma exceção de propósito.
@@ -151,7 +152,7 @@ sequenceDiagram
 - **Esqueci minha senha:** email com link (vale 2 h) → nova senha. A resposta é igual exista o email ou não.
 - **Trocar email:** o email só muda depois de clicar no link enviado ao **novo** endereço.
 - **Reenviar confirmação:** para quem perdeu o primeiro email.
-- Cadastro, "esqueci minha senha", "reenviar confirmação", troca de email e convites têm **limite por IP** (5 POSTs a cada 15 min), porque enviam email para qualquer endereço digitado.
+- Cadastro, "esqueci minha senha", "reenviar confirmação", troca de email e convites têm **limite por IP** (5 POSTs a cada 15 min), porque enviam email para qualquer endereço digitado. A edição de pessoas na área Admin tem um limite próprio, mais folgado (30 a cada 15 min).
 
 ### Serviço de email
 
@@ -191,7 +192,7 @@ Com a cultura pt-BR, "12.50" seria lido como **1250** (o ponto separa milhares).
 
 ### Rotas do Identity UI desativadas
 
-A biblioteca Identity UI traz páginas que este app não usa. Uma convenção de rotas (`Areas/Identity/IdentityPages.cs`) remove todas que não estão na lista de usadas, e elas respondem **404**:
+A biblioteca Identity UI traz páginas que este app não usa. Uma convenção de rotas (`Areas/Identity/IdentityPages.cs`) remove todas que não estão na lista de usadas, e elas respondem **404** para quem está logado. Quem não está logado é mandado para o login, como em qualquer endereço desconhecido, por causa da `FallbackPolicy`:
 
 `Account/AccessDenied`, `Account/ExternalLogin`, `Account/LoginWith2fa`, `Account/LoginWithRecoveryCode`, `Manage/SetPassword`, `Manage/ExternalLogins`, `Manage/PersonalData`, `Manage/DownloadPersonalData`, `Manage/DeletePersonalData`, `Manage/TwoFactorAuthentication`, `Manage/EnableAuthenticator`, `Manage/ResetAuthenticator`, `Manage/GenerateRecoveryCodes`, `Manage/ShowRecoveryCodes`, `Manage/Disable2fa` e `/Identity/Error`.
 
@@ -240,6 +241,8 @@ src/Moinho.Web
 tests/Moinho.Tests   testes de integração (WebApplicationFactory + Testcontainers)
 docs/                ADRs, guia de estudo, deploy, progresso, screenshots
 ```
+
+`dotnet-tools.json` fixa a versão do scaffolder oficial do Identity (`dotnet tool restore`, depois `dotnet aspnet-codegenerator identity ...`), caso você queira gerar mais páginas.
 
 Deploy em VPS (Caddy + HTTPS, SQL Server Express ou compartilhado) e Azure: [docs/DEPLOY.md](docs/DEPLOY.md).
 Para estudar o código em ordem: [docs/STUDY_GUIDE.md](docs/STUDY_GUIDE.md).

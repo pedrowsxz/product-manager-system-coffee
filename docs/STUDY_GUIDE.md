@@ -17,10 +17,10 @@ O objetivo é que você consiga explicar cada linha numa entrevista. Leia o cód
 ## 2. Cookie, perfis, claims e security stamp
 
 - **Login** (`SignInManager.PasswordSignInAsync`): confere a senha (hash PBKDF2 no banco), monta um `ClaimsPrincipal` com claims (id, email, **perfis** e o **security stamp**) e grava tudo num **cookie criptografado** (`.AspNetCore.Identity.Application`).
-- **A cada requisição**, o middleware de autenticação descriptografa o cookie e preenche `HttpContext.User`. Ele **não consulta o banco** para saber os perfis: eles estão no cookie.
+- **A cada requisição**, o middleware de autenticação descriptografa o cookie e preenche `HttpContext.User`. Por padrão, os perfis vêm **do cookie**, sem consultar o banco.
 - **Autorização:** `[Authorize(Policy = "RequireAdmin")]` olha `User.IsInRole("Admin")`, ou seja, a claim de perfil dentro do cookie.
 - **O problema:** se um admin rebaixa alguém, o cookie dessa pessoa ainda diz "Admin".
-- **Security stamp:** um valor aleatório guardado no usuário (`AspNetUsers.SecurityStamp`) e copiado no cookie. O `SecurityStampValidator` compara os dois. Se forem diferentes, o cookie é rejeitado e a pessoa é deslogada. Por padrão essa conferência acontece a cada **30 minutos**; aqui é a **cada requisição** (`ValidationInterval = TimeSpan.Zero`, em `Program.cs`).
+- **Security stamp:** um valor aleatório guardado no usuário (`AspNetUsers.SecurityStamp`) e copiado no cookie. O `SecurityStampValidator` compara os dois. Se forem diferentes, o cookie é rejeitado e a pessoa é deslogada. Por padrão essa conferência acontece a cada **30 minutos**; aqui é a **cada requisição** (`ValidationInterval = TimeSpan.Zero`, em `Program.cs`). Na prática, a cada requisição o validador carrega o usuário do banco, confere o stamp, **remonta o `ClaimsPrincipal` com os perfis atuais** e reemite o cookie. É mais trabalho por requisição (algumas consultas e um novo `Set-Cookie`), aceitável num back-office pequeno.
 - **Quem muda o stamp:** `UpdateSecurityStampAsync` (chamado pelo `StaffService` em toda alteração), `ChangePasswordAsync`, `ResetPasswordAsync` e `SetEmailAsync`.
 - **Por que `RefreshSignInAsync` no ChangePassword?** Trocar a senha muda o stamp, o que derrubaria a própria sessão. O refresh emite um cookie novo, com o stamp novo, só para esse navegador.
 
@@ -76,8 +76,9 @@ O que **não** entra: 404, 403 e 429 (são respostas esperadas, tratadas por `Us
 2. Abre uma **transação serializável**. Sem isso, dois admins poderiam, ao mesmo tempo, rebaixar um ao outro: cada um veria "existe outro admin ativo" e os dois seriam rebaixados. Com `Serializable`, a leitura da contagem e a escrita formam uma unidade.
 3. Carrega o usuário e calcula: `isSelf`, `demoting` (era Admin e deixa de ser), `deactivating` (fica inativo e ainda não estava), `emailChanged`.
 4. **Regra 1:** ninguém rebaixa nem desativa a si mesmo.
-5. **Regra 2:** contas protegidas (`IsProtectedDemo` ou o admin real de `Seed:AdminEmail`) não são rebaixadas nem desativadas; as demos também não trocam email.
-6. **Regra 3:** se a operação tira um Admin de ação, `CountOtherActiveAdminsAsync` precisa achar **pelo menos um outro** admin ativo (perfil Admin, email confirmado, sem bloqueio).
+   - Também não troca o próprio email por aqui (a conta ficaria sem confirmação e a sessão cairia na hora); para isso existe Minha conta → Email.
+5. **Regra 2:** contas protegidas (`IsProtectedDemo` ou o admin real de `Seed:AdminEmail`) não mudam de **perfil** (nem para cima: senão o botão "Equipe (demo)" viraria Admin), de **email** (quem controla o email consegue redefinir a senha) nem de **situação**.
+6. **Regra 3:** se a operação tira um Admin de ação (rebaixar, desativar ou trocar o email, que exige nova confirmação), `CountOtherActiveAdminsAsync` precisa achar **pelo menos um outro** admin ativo (perfil Admin, email confirmado, sem bloqueio).
 7. Aplica: nome (`UpdateAsync`); email (`SetEmailAsync`, que já zera `EmailConfirmed`, + `SetUserNameAsync`); perfil (remove o antigo, adiciona o novo); situação (`SetLockoutEndDateAsync(MaxValue)` = inativo, `null` = ativo).
 8. `UpdateSecurityStampAsync`: a sessão aberta da pessoa cai **na próxima requisição** (seção 2).
 9. `Commit`. Só **depois** envia o email de confirmação, para o link apontar para o dado salvo.

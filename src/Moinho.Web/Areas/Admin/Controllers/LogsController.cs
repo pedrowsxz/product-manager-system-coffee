@@ -39,7 +39,7 @@ public class LogsController(AppDbContext db, IOptions<DemoOptions> demo) : Admin
         }
 
         var total = await logs.CountAsync();
-        var page = Math.Max(1, query.Page);
+        var page = Math.Clamp(query.Page, 1, 10_000); // a huge page number would overflow Skip()
         var items = await logs
             .OrderByDescending(l => l.TimeStamp).ThenByDescending(l => l.Id)
             .Skip((page - 1) * LogListQuery.PageSize)

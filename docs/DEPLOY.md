@@ -17,7 +17,7 @@ Internet ──80/443──▶ caddy ──▶ web:8080 ──▶ sqlserver:1433
 
 - O Caddy obtém e renova o certificado HTTPS sozinho (Let's Encrypt).
 - Só as portas 80 e 443 ficam expostas. O SQL Server e o app só existem dentro da rede do Docker.
-- A rede tem sub-rede fixa (`172.30.0.0/24`) e o app só aceita cabeçalhos `X-Forwarded-*` dessa rede. É isso que faz os links nos emails usarem `https://seu-dominio` em vez de `http://web:8080`.
+- A rede tem sub-rede fixa (`172.30.0.0/24`) e o app só aceita cabeçalhos `X-Forwarded-*` dessa rede. É isso que faz os links nos emails usarem `https://seu-dominio` em vez de `http://web:8080`. Além disso, só o `DOMAIN` é aceito como `X-Forwarded-Host` (`ForwardedHeaders:AllowedHosts`).
 - As chaves do Data Protection ficam no volume `keys`. **Sem isso, cada redeploy derrubaria todos os logins, os tokens antiforgery e todos os links de confirmação e redefinição de senha já enviados por email.**
 
 ### Layout B: VPS compartilhada (`compose.shared.yaml`)
@@ -142,5 +142,5 @@ Com a demo pública e o reset diário, o backup do banco importa pouco. Já o ba
   - o **Azure SQL serverless grátis** pausa quando ocioso, e a primeira requisição depois da pausa leva dezenas de segundos (ou falha) enquanto o banco "acorda".
 - Configuração em **App Settings**, com os mesmos nomes: `ConnectionStrings__Default`, `Email__Host`, `Seed__AdminEmail`, ...
 - `DataProtection__KeysPath=/home/keys`: `/home` é persistente no App Service.
-- `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`, porque o App Service fica atrás do proxy da própria Azure e os IPs dele variam.
+- `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`, porque o App Service fica atrás do proxy da própria Azure e os IPs dele variam. Isso faz o app confiar em qualquer proxy, então defina também `ForwardedHeaders__AllowedHosts__0=seu-app.azurewebsites.net` (ou seu domínio), para ninguém conseguir trocar o host usado nos links dos emails.
 - O login do Azure SQL precisa ser dono do banco (`db_owner`) para o `EnsureCreated` criar as tabelas.

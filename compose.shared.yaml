@@ -23,6 +23,7 @@ services:
       Demo__NightlyReset: ${DEMO_ENABLED:-true}
       DataProtection__KeysPath: /keys
       ForwardedHeaders__KnownNetworks__0: ${PROXY_NETWORK_CIDR:?set PROXY_NETWORK_CIDR in .env}
+      ForwardedHeaders__AllowedHosts__0: ${DOMAIN:?set DOMAIN in .env}
     volumes:
       - keys:/keys
     networks:

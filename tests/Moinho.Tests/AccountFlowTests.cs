@@ -114,6 +114,52 @@ public class AccountFlowTests(MoinhoFactory factory) : IClassFixture<MoinhoFacto
     }
 
     [Fact]
+    public async Task Reset_password_answers_the_same_for_unknown_and_known_emails()
+    {
+        var user = await factory.CreateUserAsync(Roles.Staff);
+        var link = "/Identity/Account/ResetPassword?code=Q2ZESjhCZm9yamFkbw";
+
+        async Task<string> PostAsync(string email)
+        {
+            var r = await factory.CreateBrowser().PostFormAsync(link, new()
+            {
+                ["Input.Email"] = email, ["Input.Password"] = "Qualquer_123!", ["Input.ConfirmPassword"] = "Qualquer_123!",
+            }, postUrl: "/Identity/Account/ResetPassword");
+            Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+            return await r.Content.ReadAsStringAsync();
+        }
+
+        Assert.Contains("Link inválido ou expirado", await PostAsync(user.Email!));
+        Assert.Contains("Link inválido ou expirado", await PostAsync(NewEmail()));
+    }
+
+    [Theory]
+    [InlineData("/Identity/Account/ConfirmEmail?userId={0}&code=@@@")]
+    [InlineData("/Identity/Account/ConfirmEmail?userId={0}&code=abcde")]
+    [InlineData("/Identity/Account/ConfirmEmailChange?userId={0}&email=a@b.c&code=@@@")]
+    public async Task Tampered_links_are_treated_as_invalid_not_as_errors(string url)
+    {
+        var user = await factory.CreateUserAsync(Roles.Staff, confirmed: false);
+
+        var response = await factory.CreateBrowser().GetAsync(string.Format(url, user.Id));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.False((await FindAsync(user.Email!))!.EmailConfirmed);
+    }
+
+    [Fact]
+    public async Task Login_ignores_an_absolute_return_url()
+    {
+        var user = await factory.CreateUserAsync(Roles.Staff);
+
+        var response = await factory.CreateBrowser().PostFormAsync("/Identity/Account/Login?returnUrl=https%3A%2F%2Fmal.exemplo.com",
+            new() { ["Input.Email"] = user.Email!, ["Input.Password"] = MoinhoFactory.Password });
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/", response.Headers.Location!.OriginalString);
+    }
+
+    [Fact]
     public async Task Resend_confirmation_gives_the_same_response_for_unknown_and_unconfirmed_emails()
     {
         var user = await factory.CreateUserAsync(Roles.Staff, confirmed: false);
