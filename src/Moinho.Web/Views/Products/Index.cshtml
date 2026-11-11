@@ -1,0 +1,16 @@
+@model List<Product>
+@{
+    ViewData["Title"] = "Produtos";
+}
+<div class="page-header"><h1>Produtos</h1></div>
+<div class="table-panel">
+    <table class="table table-hover">
+        <thead><tr><th>Nome</th><th>SKU</th><th class="num">Preço</th></tr></thead>
+        <tbody>
+        @foreach (var p in Model)
+        {
+            <tr><td>@p.Name</td><td class="sku">@p.Sku</td><td class="num">@Display.Money(p.Price)</td></tr>
+        }
+        </tbody>
+    </table>
+</div>

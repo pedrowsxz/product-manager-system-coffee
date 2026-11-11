@@ -1,0 +1,9 @@
+@using Microsoft.Extensions.Options
+@inject IOptions<DemoOptions> Demo
+<footer class="app-footer">
+    Moinho · back-office de torrefação
+    @if (Demo.Value.Enabled)
+    {
+        <span>· Dados de demonstração são restaurados diariamente às 04:00.</span>
+    }
+</footer>

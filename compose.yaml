@@ -1,0 +1,58 @@
+# Local development: `docker compose up --build` is the only command needed.
+# Every value has a dev default, so a .env file is optional (see .env.example).
+name: moinho
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    # The image is amd64 only; on Apple Silicon it runs under emulation (slower first start).
+    platform: linux/amd64
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-Moinho_Dev_2026!}
+    ports:
+      - "${SQL_PORT:-1433}:1433"
+    volumes:
+      - sqldata:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' -b -o /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "${MAILPIT_PORT:-8025}:8025" # web UI: http://localhost:8025
+      - "${SMTP_PORT:-1025}:1025" # SMTP
+
+  web:
+    build: .
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Server=sqlserver,1433;Database=Moinho;User Id=sa;Password=${MSSQL_SA_PASSWORD:-Moinho_Dev_2026!};TrustServerCertificate=True"
+      Email__Host: mailpit
+      Email__Port: "1025"
+      Email__From: "Moinho <nao-responda@moinho.app>"
+      Email__UseStartTls: "false"
+      Seed__AdminEmail: ${ADMIN_EMAIL:-admin@moinho.app}
+      Seed__AdminPassword: ${ADMIN_PASSWORD:-Admin_Dev_2026!}
+      Demo__Enabled: "true"
+      Demo__EnableErrorSimulation: "true"
+      Demo__NightlyReset: "true"
+      DataProtection__KeysPath: /keys
+    volumes:
+      - keys:/keys
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+
+volumes:
+  sqldata:
+  keys:

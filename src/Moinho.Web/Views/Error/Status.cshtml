@@ -1,0 +1,18 @@
+@model int
+@{
+    var (title, text) = Model switch
+    {
+        400 => ("Requisição inválida", "Não foi possível processar o pedido. Recarregue a página e tente de novo."),
+        403 => ("Acesso negado", "Sua conta não tem permissão para acessar esta página."),
+        404 => ("Página não encontrada", "O endereço pode ter mudado ou nunca ter existido."),
+        429 => ("Muitas tentativas", "Você fez muitas tentativas em pouco tempo. Aguarde alguns minutos e tente de novo."),
+        _ => ("Algo deu errado", "Não foi possível concluir o pedido."),
+    };
+    ViewData["Title"] = title;
+}
+<div class="status-page">
+    <p class="status-code">@Model</p>
+    <h1 class="h3">@title</h1>
+    <p class="text-body-secondary">@text</p>
+    <a class="btn btn-primary" href="/">Voltar ao início</a>
+</div>

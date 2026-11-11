@@ -1,0 +1,76 @@
+﻿@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@{
+    var signedIn = SignInManager.IsSignedIn(User);
+    var isAdmin = User.IsInRole(Roles.Admin);
+    var path = Context.Request.Path.Value ?? "";
+    string Active(string prefix) => path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] · Moinho</title>
+    <script>
+        // Follow the operating system's light/dark preference (Bootstrap 5.3 color modes).
+        const dark = window.matchMedia('(prefers-color-scheme: dark)');
+        const apply = () => document.documentElement.setAttribute('data-bs-theme', dark.matches ? 'dark' : 'light');
+        apply();
+        dark.addEventListener('change', apply);
+    </script>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+@if (signedIn)
+{
+    <div class="app-shell">
+        <aside class="sidebar">
+            <a class="brand" href="/">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="7" ry="10" transform="rotate(35 12 12)" /><path d="M8.5 5.5c3 3 3 10 7 13" /></svg>
+                Moinho
+            </a>
+            <nav class="nav flex-column">
+                <a class="nav-link @Active("/Produtos")" href="/Produtos">Produtos</a>
+                @if (isAdmin)
+                {
+                    <div class="nav-section">Administração</div>
+                    <a class="nav-link @(path.Equals("/Admin", StringComparison.OrdinalIgnoreCase) ? "active" : "")" href="/Admin">Painel</a>
+                    <a class="nav-link @Active("/Admin/Equipe")" href="/Admin/Equipe">Equipe</a>
+                    <a class="nav-link @Active("/Admin/Logs")" href="/Admin/Logs">Logs</a>
+                }
+            </nav>
+            <div class="sidebar-footer">
+                <a class="nav-link @Active("/Identity/Account/Manage")" href="/Identity/Account/Manage">Minha conta</a>
+                <form method="post" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="/">
+                    <button type="submit" class="nav-link btn btn-link">Sair</button>
+                </form>
+                <div class="user-name" title="@User.Identity?.Name">@User.Identity?.Name</div>
+            </div>
+        </aside>
+        <main class="content">
+            @RenderBody()
+            <partial name="_Footer" />
+        </main>
+    </div>
+}
+else
+{
+    <main class="auth-shell">
+        <a class="brand brand-dark" href="/">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="7" ry="10" transform="rotate(35 12 12)" /><path d="M8.5 5.5c3 3 3 10 7 13" /></svg>
+            Moinho
+        </a>
+        <div class="auth-card">
+            @RenderBody()
+        </div>
+        <partial name="_Footer" />
+    </main>
+}
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
