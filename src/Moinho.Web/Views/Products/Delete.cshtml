@@ -1,0 +1,13 @@
+@model Product
+@{
+    ViewData["Title"] = "Excluir produto";
+}
+<div class="page-header"><h1>Excluir produto</h1></div>
+<form method="post" class="panel form-narrow">
+    <p>Tem certeza que deseja excluir <strong>@Model.Name</strong> (<span class="sku">@Model.Sku</span>)? Esta ação não pode ser desfeita.</p>
+    <p class="small text-body-secondary">Se o produto só saiu de linha, prefira marcá-lo como inativo.</p>
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-danger">Excluir</button>
+        <a class="btn btn-outline-secondary" asp-action="Details" asp-route-id="@Model.Id">Cancelar</a>
+    </div>
+</form>

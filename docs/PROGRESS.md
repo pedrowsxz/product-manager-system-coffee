@@ -37,3 +37,17 @@ Notes
   - Protected demo accounts: ChangePassword, Manage/Email, ForgotPassword, ResetPassword and ConfirmEmailChange all refuse them.
 - Tests (35 total): register / confirm / login, refused before confirmation, duplicate register, forgot / reset (the old password stops working), same response for unknown emails, change password, demo protection, email change, email failure, forwarded host in links, unused routes return 404, rate limit.
 - Checked by hand on the Docker stack: register → Mailpit → confirm → login; forgot → Mailpit → reset; no token in the container logs.
+
+## Stage 3: Products ✅
+
+- `ProductsController` (`RequireStaff`) with list, details, create, edit and delete (a GET confirmation page, then a POST). The routes are pt-BR (`/Produtos`, `/Produtos/Novo`, `/Produtos/{id}/Editar`, ...).
+- The list searches name or SKU, filters by status, sorts by name, price or date added (column headers), and pages 20 at a time. All of it lives in the query string.
+- `ProductFormViewModel` binds the form. It has no `Id`, `DateAdded` or `UpdatedAt`, so those can't be over-posted.
+- **pt-BR decimals (deviation from the spec's proposed fix):** Price binds as a string, checked by a pt-BR `[RegularExpression]` and parsed with the pt-BR culture.
+  - The same regex becomes jquery-validation's client rule through unobtrusive validation, so no JS override is needed.
+  - The input is `type="text" inputmode="decimal"`.
+  - "12.50" gets a clear message instead of being saved as 1250.
+- Duplicate SKU: the unique index rejects it and `ProductService` turns SqlException 2627/2601 into the field error "SKU já cadastrado.". There's no pre-check, so there's one path that also covers races.
+- EF's own Error-level logs for failed commands (`SaveChangesFailed`, `CommandError`) are ignored. Each failure already surfaces as an exception that is handled or logged once.
+- `PagedList<T>`, plus the `_Pager` and `_Flash` partials, shared with the Admin pages later.
+- Tests (51 total): the pt-BR price cases, rejected formats, price ≤ 0, negative stock, uppercase SKU, duplicate SKU (form and database), DateAdded over-posting on create and edit, delete, and list search/filter/sort/paging.

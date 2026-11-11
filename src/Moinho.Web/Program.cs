@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.WebEncoders;
 using Moinho.Web.Areas.Identity;
 using Moinho.Web.Data;
@@ -36,8 +37,12 @@ try
     builder.Services.Configure<EmailOptions>(config.GetSection("Email"));
     builder.Services.AddSingleton(TimeProvider.System);
 
-    builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(config.GetConnectionString("Default")
-        ?? throw new InvalidOperationException("Connection string 'Default' não configurada.")));
+    builder.Services.AddDbContext<AppDbContext>(options => options
+        .UseSqlServer(config.GetConnectionString("Default")
+            ?? throw new InvalidOperationException("Connection string 'Default' não configurada."))
+        // EF logs every failed command at Error level. Each failure also surfaces as an exception that
+        // we either handle (a duplicate SKU) or log once in the error handler, so skip the duplicate.
+        .ConfigureWarnings(w => w.Ignore(CoreEventId.SaveChangesFailed, RelationalEventId.CommandError)));
 
     // ---- Identity ----
     builder.Services
@@ -149,6 +154,7 @@ try
     builder.Services.Configure<WebEncoderOptions>(o => o.TextEncoderSettings = new TextEncoderSettings(UnicodeRanges.All));
 
     builder.Services.AddScoped<Seeder>();
+    builder.Services.AddScoped<ProductService>();
 
     var app = builder.Build();
 

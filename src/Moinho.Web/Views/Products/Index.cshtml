@@ -1,16 +1,107 @@
-@model List<Product>
+@using Microsoft.AspNetCore.WebUtilities
+@model PagedList<Product>
 @{
     ViewData["Title"] = "Produtos";
+    var query = (ProductListQuery)ViewBag.Query;
+    var filtered = !string.IsNullOrWhiteSpace(query.Q) || !string.IsNullOrEmpty(query.Status);
+
+    // Clicking a column header sorts by it; clicking again flips the direction.
+    string SortLink(string column)
+    {
+        var dir = query.Sort == column && query.Dir == "asc" ? "desc" : "asc";
+        var values = new Dictionary<string, string?> { ["q"] = query.Q, ["status"] = query.Status, ["sort"] = column, ["dir"] = dir };
+        return QueryHelpers.AddQueryString("/Produtos", values.Where(v => !string.IsNullOrEmpty(v.Value)));
+    }
+    string Arrow(string column) => query.Sort != column ? "" : query.Dir == "desc" ? " ↓" : " ↑";
 }
-<div class="page-header"><h1>Produtos</h1></div>
-<div class="table-panel">
-    <table class="table table-hover">
-        <thead><tr><th>Nome</th><th>SKU</th><th class="num">Preço</th></tr></thead>
-        <tbody>
-        @foreach (var p in Model)
-        {
-            <tr><td>@p.Name</td><td class="sku">@p.Sku</td><td class="num">@Display.Money(p.Price)</td></tr>
-        }
-        </tbody>
-    </table>
+<div class="page-header">
+    <h1>Produtos</h1>
+    <a class="btn btn-primary" asp-action="Create">Novo produto</a>
 </div>
+
+<partial name="_Flash" />
+
+<form method="get" class="filters row g-2 align-items-end">
+    <div class="col-sm-6 col-lg-5">
+        <label for="q" class="form-label small mb-1">Buscar</label>
+        <input id="q" name="q" value="@query.Q" class="form-control" placeholder="Nome ou SKU" />
+    </div>
+    <div class="col-sm-3 col-lg-2">
+        <label for="status" class="form-label small mb-1">Situação</label>
+        <select id="status" name="status" class="form-select">
+            <option value="">Todos</option>
+            <option value="active" selected="@(query.Status == "active")">Ativos</option>
+            <option value="inactive" selected="@(query.Status == "inactive")">Inativos</option>
+        </select>
+    </div>
+    <input type="hidden" name="sort" value="@query.Sort" />
+    <input type="hidden" name="dir" value="@query.Dir" />
+    <div class="col-auto">
+        <button class="btn btn-outline-primary" type="submit">Filtrar</button>
+        @if (filtered)
+        {
+            <a class="btn btn-link" href="/Produtos">Limpar</a>
+        }
+    </div>
+</form>
+
+@if (Model.TotalCount == 0)
+{
+    <div class="table-panel empty-state">
+        @if (filtered)
+        {
+            <h2>Nenhum produto encontrado</h2>
+            <p>Tente outro termo de busca ou <a href="/Produtos">limpe os filtros</a>.</p>
+        }
+        else
+        {
+            <h2>Nenhum produto cadastrado</h2>
+            <p>Comece cadastrando o primeiro item do catálogo.</p>
+            <a class="btn btn-primary" asp-action="Create">Novo produto</a>
+        }
+    </div>
+}
+else
+{
+    <div class="table-panel">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th><a class="sort-link" href="@SortLink("name")">Nome@(Arrow("name"))</a></th>
+                    <th>SKU</th>
+                    <th class="num"><a class="sort-link" href="@SortLink("price")">Preço@(Arrow("price"))</a></th>
+                    <th class="num">Estoque</th>
+                    <th>Situação</th>
+                    <th><a class="sort-link" href="@SortLink("date")">Adicionado em@(Arrow("date"))</a></th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var p in Model.Items)
+            {
+                <tr>
+                    <td><a asp-action="Details" asp-route-id="@p.Id" class="text-body text-decoration-none fw-medium">@p.Name</a></td>
+                    <td class="sku">@p.Sku</td>
+                    <td class="num">@Display.Money(p.Price)</td>
+                    <td class="num @(p.StockQuantity == 0 ? "text-danger" : "")">@p.StockQuantity</td>
+                    <td>
+                        @if (p.IsActive)
+                        {
+                            <span class="badge-soft badge-active">Ativo</span>
+                        }
+                        else
+                        {
+                            <span class="badge-soft badge-inactive">Inativo</span>
+                        }
+                    </td>
+                    <td class="text-nowrap">@Display.Date(p.DateAdded)</td>
+                    <td class="text-end text-nowrap">
+                        <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@p.Id">Editar</a>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    <partial name="_Pager" model="Model.Pager" />
+}
