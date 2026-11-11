@@ -51,3 +51,24 @@ Notes
 - EF's own Error-level logs for failed commands (`SaveChangesFailed`, `CommandError`) are ignored. Each failure already surfaces as an exception that is handled or logged once.
 - `PagedList<T>`, plus the `_Pager` and `_Flash` partials, shared with the Admin pages later.
 - Tests (51 total): the pt-BR price cases, rejected formats, price ≤ 0, negative stock, uppercase SKU, duplicate SKU (form and database), DateAdded over-posting on create and edit, delete, and list search/filter/sort/paging.
+
+## Stage 4: Admin area ✅
+
+- `AdminControllerBase` (`[Area("Admin")]` + `[Authorize(Policy = RequireAdmin)]`), the only base class. `Policies` constants replace the string literals.
+- **Painel** (`/Admin`): active/inactive products, staff by status (active, unconfirmed, locked, inactive) and errors in the last 24 h. Each tile links to the filtered list.
+- **Equipe** (`/Admin/Equipe`): search by name or email, filter by role and status, paging. Invite (create), edit and delete (GET confirmation, then POST).
+- `StaffService` (CORE_LOGIC = implement): every write goes through `UserManager`.
+  - Invitation: the account is created without a password and with `EmailConfirmed = true`, and an invite email links to ResetPassword (`invite=true`).
+  - Inactive = `LockoutEnd = DateTimeOffset.MaxValue`. Changing a user's email sets `EmailConfirmed = false` and sends a confirmation email.
+  - Every update calls `UpdateSecurityStampAsync`.
+  - Rules: no self-demote, self-deactivate or self-delete; protected accounts can't be demoted, deactivated or deleted, and demo accounts' emails can't be changed; the last active admin is checked inside a **serializable transaction** together with the change.
+  - **Addition (kickoff fix 2):** the real admin from `Seed:AdminEmail` is protected like the demo accounts. Invite and edit POSTs share the email rate limit, because the demo Admin account is public.
+  - `IdentityResult`s that can only fail because of a bug throw. The transaction rolls back and the error page logs it.
+- Badges: Ativo, Não confirmado, Bloqueado (temporary lockout), Inativo (deactivated), Convite pendente (no password yet), Demo.
+- Tests (73 total):
+  - reflection over every Admin-area controller (base class, policy, area, no `[AllowAnonymous]`);
+  - Staff gets 403 and Admin gets 200; anonymous users are redirected; the nav link is hidden from Staff; antiforgery is enforced;
+  - the self rules, protected accounts, the demo email, the invitation end to end, a duplicate invite;
+  - a demoted admin is signed out on the next request; a deactivated user is signed out and gets the lockout page;
+  - an email change needs confirmation; delete; list filters; the last admin (on a separate database).
+- Checked on the Docker stack: Painel counts; invite → Mailpit → "Definir sua senha" → login; Staff gets 403 on `/Admin`.

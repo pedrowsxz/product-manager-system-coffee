@@ -1,0 +1,79 @@
+@model PagedList<StaffRow>
+@{
+    ViewData["Title"] = "Equipe";
+    var query = (StaffListQuery)ViewBag.Query;
+    var filtered = !string.IsNullOrWhiteSpace(query.Q) || !string.IsNullOrEmpty(query.Role) || !string.IsNullOrEmpty(query.Status);
+}
+<div class="page-header">
+    <h1>Equipe</h1>
+    <a class="btn btn-primary" asp-action="Create">Convidar pessoa</a>
+</div>
+
+<partial name="_Flash" />
+
+<form method="get" class="filters row g-2 align-items-end">
+    <div class="col-sm-6 col-lg-4">
+        <label for="q" class="form-label small mb-1">Buscar</label>
+        <input id="q" name="q" value="@query.Q" class="form-control" placeholder="Nome ou email" />
+    </div>
+    <div class="col-sm-3 col-lg-2">
+        <label for="role" class="form-label small mb-1">Perfil</label>
+        <select id="role" name="role" class="form-select">
+            <option value="">Todos</option>
+            <option value="Admin" selected="@(query.Role == "Admin")">Admin</option>
+            <option value="Staff" selected="@(query.Role == "Staff")">Equipe</option>
+        </select>
+    </div>
+    <div class="col-sm-3 col-lg-2">
+        <label for="status" class="form-label small mb-1">Situação</label>
+        <select id="status" name="status" class="form-select">
+            <option value="">Todas</option>
+            <option value="active" selected="@(query.Status == "active")">Ativos</option>
+            <option value="unconfirmed" selected="@(query.Status == "unconfirmed")">Não confirmados</option>
+            <option value="locked" selected="@(query.Status == "locked")">Bloqueados</option>
+            <option value="inactive" selected="@(query.Status == "inactive")">Inativos</option>
+        </select>
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-outline-primary" type="submit">Filtrar</button>
+        @if (filtered)
+        {
+            <a class="btn btn-link" href="/Admin/Equipe">Limpar</a>
+        }
+    </div>
+</form>
+
+@if (Model.TotalCount == 0)
+{
+    <div class="table-panel empty-state">
+        <h2>Ninguém encontrado</h2>
+        <p>Nenhuma pessoa corresponde aos filtros. <a href="/Admin/Equipe">Limpar filtros</a></p>
+    </div>
+}
+else
+{
+    <div class="table-panel">
+        <table class="table table-hover">
+            <thead>
+                <tr><th>Nome</th><th>Email</th><th>Perfil</th><th>Situação</th><th>Desde</th><th></th></tr>
+            </thead>
+            <tbody>
+            @foreach (var u in Model.Items)
+            {
+                <tr>
+                    <td class="fw-medium">@u.FullName</td>
+                    <td>@u.Email</td>
+                    <td>@(u.Role == Roles.Admin ? "Admin" : "Equipe")</td>
+                    <td><partial name="_StaffBadges" model="u" /></td>
+                    <td class="text-nowrap">@Display.Date(u.CreatedAt)</td>
+                    <td class="text-end text-nowrap">
+                        <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@u.Id">Editar</a>
+                        <a class="btn btn-sm btn-outline-danger" asp-action="Delete" asp-route-id="@u.Id">Excluir</a>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    <partial name="_Pager" model="Model.Pager" />
+}

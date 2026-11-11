@@ -1,0 +1,27 @@
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Painel";
+}
+<div class="page-header"><h1>Painel</h1></div>
+
+<h2 class="h6 text-body-secondary text-uppercase mb-2">Produtos</h2>
+<div class="stat-grid">
+    <a class="stat" href="/Produtos?status=active"><div class="stat-label">Ativos</div><div class="stat-value">@Model.ActiveProducts</div></a>
+    <a class="stat" href="/Produtos?status=inactive"><div class="stat-label">Inativos</div><div class="stat-value">@Model.InactiveProducts</div></a>
+</div>
+
+<h2 class="h6 text-body-secondary text-uppercase mb-2">Equipe</h2>
+<div class="stat-grid">
+    <a class="stat" href="/Admin/Equipe?status=active"><div class="stat-label">Ativos</div><div class="stat-value">@Model.ActiveStaff</div></a>
+    <a class="stat" href="/Admin/Equipe?status=unconfirmed"><div class="stat-label">Não confirmados</div><div class="stat-value">@Model.UnconfirmedStaff</div></a>
+    <a class="stat" href="/Admin/Equipe?status=locked"><div class="stat-label">Bloqueados</div><div class="stat-value">@Model.LockedStaff</div></a>
+    <a class="stat" href="/Admin/Equipe?status=inactive"><div class="stat-label">Inativos</div><div class="stat-value">@Model.InactiveStaff</div></a>
+</div>
+
+<h2 class="h6 text-body-secondary text-uppercase mb-2">Sistema</h2>
+<div class="stat-grid">
+    <a class="stat" href="/Admin/Logs">
+        <div class="stat-label">Erros nas últimas 24 h</div>
+        <div class="stat-value @(Model.ErrorsLast24h > 0 ? "text-danger" : "")">@Model.ErrorsLast24h</div>
+    </a>
+</div>

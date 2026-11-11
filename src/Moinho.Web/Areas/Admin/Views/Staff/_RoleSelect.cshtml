@@ -1,0 +1,5 @@
+@model string
+<select name="Role" id="Role" class="form-select">
+    <option value="Staff" selected="@(Model == "Staff")">Equipe: gerencia produtos</option>
+    <option value="Admin" selected="@(Model == "Admin")">Admin: produtos, equipe e logs</option>
+</select>

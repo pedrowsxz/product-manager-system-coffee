@@ -1,0 +1,24 @@
+@model StaffRow
+@switch (Model.Status)
+{
+    case StaffStatus.Active:
+        <span class="badge-soft badge-active">Ativo</span>
+        break;
+    case StaffStatus.Unconfirmed:
+        <span class="badge-soft badge-warning">Não confirmado</span>
+        break;
+    case StaffStatus.Locked:
+        <span class="badge-soft badge-danger">Bloqueado</span>
+        break;
+    case StaffStatus.Inactive:
+        <span class="badge-soft badge-inactive">Inativo</span>
+        break;
+}
+@if (!Model.HasPassword && !Model.IsProtectedDemo)
+{
+    <span class="badge-soft badge-warning" title="A pessoa ainda não definiu a senha pelo convite">Convite pendente</span>
+}
+@if (Model.IsProtectedDemo)
+{
+    <span class="badge-soft badge-accent" title="Conta de demonstração protegida">Demo</span>
+}

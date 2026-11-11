@@ -1,0 +1,56 @@
+@model StaffEditViewModel
+@{
+    var row = (StaffRow)ViewBag.Row;
+    var isSelf = (bool)ViewBag.IsSelf;
+    var isProtected = (bool)ViewBag.IsProtected;
+    ViewData["Title"] = "Editar " + row.FullName;
+}
+<div class="page-header">
+    <div>
+        <a class="small" asp-action="Index">← Equipe</a>
+        <h1 class="mt-1">@row.FullName</h1>
+    </div>
+    <div><partial name="_StaffBadges" model="row" /></div>
+</div>
+<form method="post" class="panel form-narrow" novalidate>
+    @if (isProtected)
+    {
+        <div class="alert alert-info py-2 small">Conta protegida: não pode ser rebaixada, desativada nem excluída@(row.IsProtectedDemo ? ", e o email não pode mudar" : "").</div>
+    }
+    @if (isSelf)
+    {
+        <div class="alert alert-info py-2 small">Esta é a sua conta: você não pode remover seu próprio acesso de administrador.</div>
+    }
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
+    <div class="mb-3">
+        <label asp-for="FullName" class="form-label"></label>
+        <input asp-for="FullName" class="form-control" />
+        <span asp-validation-for="FullName" class="text-danger small"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Email" class="form-label"></label>
+        <input asp-for="Email" class="form-control" />
+        <div class="form-text">Ao trocar o email, a pessoa precisa confirmar o novo endereço antes de entrar de novo.</div>
+        <span asp-validation-for="Email" class="text-danger small"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Role" class="form-label"></label>
+        <partial name="_RoleSelect" model="Model.Role" />
+        <span asp-validation-for="Role" class="text-danger small"></span>
+    </div>
+    <div class="mb-4">
+        <div class="form-check form-switch">
+            <input asp-for="IsActive" class="form-check-input" role="switch" />
+            <label asp-for="IsActive" class="form-check-label">Ativo (pode entrar no sistema)</label>
+        </div>
+        <span asp-validation-for="IsActive" class="text-danger small"></span>
+    </div>
+    <p class="small text-body-secondary">Mudanças de perfil, email ou situação encerram as sessões abertas dessa pessoa imediatamente.</p>
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Salvar</button>
+        <a class="btn btn-outline-secondary" asp-action="Index">Cancelar</a>
+    </div>
+</form>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

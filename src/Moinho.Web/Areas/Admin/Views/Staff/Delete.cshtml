@@ -1,0 +1,23 @@
+@model StaffRow
+@{
+    ViewData["Title"] = "Excluir conta";
+    var isSelf = (bool)ViewBag.IsSelf;
+    var isProtected = (bool)ViewBag.IsProtected;
+}
+<div class="page-header"><h1>Excluir conta</h1></div>
+<form method="post" class="panel form-narrow">
+    @if (isSelf || isProtected)
+    {
+        <div class="alert alert-warning py-2">@(isSelf ? "Você não pode excluir a própria conta." : "Esta conta é protegida e não pode ser excluída.")</div>
+        <a class="btn btn-outline-secondary" asp-action="Index">Voltar</a>
+    }
+    else
+    {
+        <p>Excluir a conta de <strong>@Model.FullName</strong> (@Model.Email)? A pessoa perde o acesso na hora. Esta ação não pode ser desfeita.</p>
+        <p class="small text-body-secondary">Para suspender o acesso sem apagar, prefira desativar a conta.</p>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-danger">Excluir</button>
+            <a class="btn btn-outline-secondary" asp-action="Index">Cancelar</a>
+        </div>
+    }
+</form>

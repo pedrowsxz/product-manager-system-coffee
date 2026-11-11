@@ -1,11 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Moinho.Web.Models;
 using Moinho.Web.Services;
 using Moinho.Web.ViewModels;
 
 namespace Moinho.Web.Controllers;
 
-[Authorize(Policy = "RequireStaff")]
+[Authorize(Policy = Policies.RequireStaff)]
 [Route("Produtos")]
 public class ProductsController(ProductService products) : Controller
 {

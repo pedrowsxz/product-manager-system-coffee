@@ -99,8 +99,8 @@ try
     builder.Services.AddAuthorizationBuilder()
         // Every endpoint requires a signed-in user unless it says [AllowAnonymous].
         .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build())
-        .AddPolicy("RequireAdmin", policy => policy.RequireRole(Roles.Admin))
-        .AddPolicy("RequireStaff", policy => policy.RequireRole(Roles.Admin, Roles.Staff));
+        .AddPolicy(Policies.RequireAdmin, policy => policy.RequireRole(Roles.Admin))
+        .AddPolicy(Policies.RequireStaff, policy => policy.RequireRole(Roles.Admin, Roles.Staff));
 
     // ---- Behind a reverse proxy (Caddy) ----
     // Without this, Request.Scheme/Host are what Caddy used to reach the container (http://web:8080),
@@ -155,6 +155,7 @@ try
 
     builder.Services.AddScoped<Seeder>();
     builder.Services.AddScoped<ProductService>();
+    builder.Services.AddScoped<StaffService>();
 
     var app = builder.Build();
 
