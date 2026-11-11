@@ -58,13 +58,13 @@ public class AccountEmails(
         try
         {
             await sender.SendEmailAsync(to, email.Subject, email.Html);
-            logger.LogInformation("Email de {EmailKind} enviado para o usuário {UserId}", kind, user.Id);
+            logger.LogInformation("Email de {EmailKind:l} enviado para o usuário {UserId:l}", kind, user.Id);
             return true;
         }
         catch (Exception ex)
         {
             // The link contains a token, so only the kind of email and the user id are logged.
-            logger.LogError(ex, "Falha ao enviar email de {EmailKind} para o usuário {UserId}", kind, user.Id);
+            logger.LogError(ex, "Falha ao enviar email de {EmailKind:l} para o usuário {UserId:l}", kind, user.Id);
             return false;
         }
     }

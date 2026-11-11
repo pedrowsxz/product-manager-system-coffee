@@ -17,6 +17,7 @@ using Moinho.Web.Data;
 using Moinho.Web.Models;
 using Moinho.Web.Services;
 using Serilog;
+using Serilog.Debugging;
 
 // Used only until the host is built (and for a crash during startup). The host gets its own logger below.
 Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateLogger();
@@ -26,11 +27,19 @@ try
     var builder = WebApplication.CreateBuilder(args);
     var config = builder.Configuration;
 
+    // The host's own logger (not the static Log.Logger), so each host, including each test server,
+    // writes to its own database. The host disposes it on shutdown, which flushes the batched DB sink.
     builder.Services.AddSerilog((services, logger) => logger
         .ReadFrom.Configuration(config)
         .Enrich.FromLogContext()
-        .WriteTo.Console(),
+        .WriteTo.Console()
+        .WriteErrorsToDatabase(config.GetConnectionString("Default")!),
         preserveStaticLogger: true);
+    if (builder.Environment.IsDevelopment())
+    {
+        // Shows the sink's own failures (e.g. a column mismatch) that would otherwise be silent.
+        SelfLog.Enable(Console.Error);
+    }
 
     builder.Services.Configure<SeedOptions>(config.GetSection("Seed"));
     builder.Services.Configure<DemoOptions>(config.GetSection("Demo"));

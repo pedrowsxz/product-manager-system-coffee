@@ -72,3 +72,23 @@ Notes
   - a demoted admin is signed out on the next request; a deactivated user is signed out and gets the lockout page;
   - an email change needs confirmation; delete; list filters; the last admin (on a separate database).
 - Checked on the Docker stack: Painel counts; invite → Mailpit → "Definir sua senha" → login; Staff gets 403 on `/Admin`.
+
+## Stage 5: Logging ✅
+
+- Serilog writes to the console (Information and above, with `Microsoft.AspNetCore` and `EntityFrameworkCore` at Warning, which also keeps request URLs with tokens out of the logs) and to `Serilog.Sinks.MSSqlServer` (9.0.3).
+  - The database sink is a sub-logger that only takes **Error and above from `Moinho.*`**. The framework logs every unhandled exception again (ExceptionHandlerMiddleware, request logging), so this gives exactly one row per failure.
+- The `ErrorLogs` table comes from the `ErrorLog` EF entity (EnsureCreated), and the sink runs with `AutoCreateSqlTable = false`.
+  - Columns: Id, Message, MessageTemplate, Level nvarchar(16), TimeStamp datetime2 (UTC), Exception, LogEvent (JSON), TraceId.
+  - The XML `Properties` column was dropped because `LogEvent` has the same data.
+  - Checked against the sink 9.0.3 source and `INFORMATION_SCHEMA` on the running database. `SelfLog` is on in Development.
+- The host owns its logger (`AddSerilog(..., preserveStaticLogger: true)`) and disposes it on shutdown, which flushes the batch. `Log.CloseAndFlushAsync()` covers the bootstrap logger.
+- `/Erro` logs the exception at Error with the path and user id only, and shows the TraceId (`Activity.Current.TraceId`, the same value Serilog stores) plus a "Ver no log" link for admins.
+- The Admin **Logs** page has level, date range (São Paulo days) and TraceId filters, paging, and a detail view showing the message, exception and pretty-printed properties.
+- **Simular erro** (POST, `Demo:EnableErrorSimulation`, 404 when off).
+- Startup retry now also catches EF's "transient failure" wrapper (parallel `CREATE DATABASE` calls can briefly fight over a lock on `model`).
+- Tests (76 total):
+  - simulate error → friendly 500 page without a stack trace → exactly one Error row with that TraceId, UserId in the properties, UTC timestamp, found on the list and details pages;
+  - 404s and 403s write no row;
+  - an email failure writes one row that contains no link, token or password.
+- Checked on the Docker stack: simulate → TraceId on the page → the same row in SQL and on the Logs page.
+- The dev Docker database had to be recreated because the ErrorLogs column types changed. That is exactly the EnsureCreated limitation from ADR 0002.

@@ -10,7 +10,9 @@ using Moinho.Web.Models;
 
 namespace Moinho.Tests.Infrastructure;
 
-// The real app (same Program.cs, same EnsureCreated + seeder) pointed at a fresh database.
+// The real app (same Program.cs, same EnsureCreated + seeder) pointed at a new, uniquely named
+// database, so each test class starts from the seed. Databases aren't dropped afterwards: the
+// whole container is thrown away at the end of the run.
 public class MoinhoFactory(SqlServerFixture sql) : WebApplicationFactory<Program>
 {
     public const string AdminEmail = "admin@teste.local";
@@ -59,18 +61,5 @@ public class MoinhoFactory(SqlServerFixture sql) : WebApplicationFactory<Program
         Assert.True((await users.CreateAsync(user, Password)).Succeeded);
         Assert.True((await users.AddToRoleAsync(user, role)).Succeeded);
         return user;
-    }
-
-    public override async ValueTask DisposeAsync()
-    {
-        try
-        {
-            await WithDbAsync(db => db.Database.EnsureDeletedAsync());
-        }
-        catch (ObjectDisposedException)
-        {
-        }
-        await base.DisposeAsync();
-        GC.SuppressFinalize(this);
     }
 }

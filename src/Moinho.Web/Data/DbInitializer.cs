@@ -14,7 +14,9 @@ public static class DbInitializer
         // The brief mandates EnsureCreated: it builds every table (Identity, Products, ErrorLogs) straight
         // from the EF model when the database doesn't exist yet. It never alters an existing schema and
         // keeps no migration history, so a model change means dropping the database (see docs/adr/0002).
-        // In Docker the app can start before SQL Server accepts logins, so retry for about a minute.
+        // In Docker the app can start before SQL Server accepts logins, and parallel CREATE DATABASE
+        // calls can briefly fight over a lock, so retry for about a minute. EF sometimes wraps the
+        // SqlException in an InvalidOperationException ("transient failure"), hence the second check.
         for (var attempt = 1; ; attempt++)
         {
             try
@@ -22,9 +24,9 @@ public static class DbInitializer
                 await db.Database.EnsureCreatedAsync(cancellationToken);
                 break;
             }
-            catch (SqlException ex) when (attempt < 30)
+            catch (Exception ex) when (attempt < 30 && (ex is SqlException || ex.InnerException is SqlException))
             {
-                logger.LogWarning("SQL Server ainda não está pronto (tentativa {Attempt}): {Message}", attempt, ex.Message);
+                logger.LogWarning("SQL Server ainda não está pronto (tentativa {Attempt}): {Message}", attempt, (ex.InnerException ?? ex).Message);
                 await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
             }
         }

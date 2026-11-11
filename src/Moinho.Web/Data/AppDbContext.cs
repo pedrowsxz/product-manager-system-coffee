@@ -28,13 +28,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         });
 
         // EnsureCreated creates this table, so the Serilog sink runs with AutoCreateSqlTable = false.
-        // Names and types must match the sink's standard columns (Serilog.Sinks.MSSqlServer):
-        // Level nvarchar(128), TimeStamp datetime, the rest nvarchar(max).
+        // Names and types match the sink's standard columns as configured in ErrorLogSink.Columns():
+        // Id int identity, Level nvarchar(16), TimeStamp datetime2 (UTC), the rest nvarchar(max).
         builder.Entity<ErrorLog>(log =>
         {
-            log.ToTable("ErrorLogs");
-            log.Property(l => l.Level).HasMaxLength(128);
-            log.Property(l => l.TimeStamp).HasColumnType("datetime");
+            log.ToTable(ErrorLogSink.TableName);
+            log.Property(l => l.Level).HasMaxLength(16);
             log.HasIndex(l => l.TimeStamp);
         });
     }

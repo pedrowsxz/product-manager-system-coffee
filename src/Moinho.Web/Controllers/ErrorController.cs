@@ -22,7 +22,7 @@ public class ErrorController(ILogger<ErrorController> logger) : Controller
         if (failure is not null)
         {
             // Path and user id only: never the query string, form values, passwords or tokens.
-            logger.LogError(failure.Error, "Erro não tratado em {Path} (usuário {UserId})",
+            logger.LogError(failure.Error, "Erro não tratado em {Path:l} (usuário {UserId:l})",
                 failure.Path, User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "anônimo");
             Response.StatusCode = StatusCodes.Status500InternalServerError;
         }
