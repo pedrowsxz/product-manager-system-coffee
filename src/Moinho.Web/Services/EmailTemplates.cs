@@ -48,7 +48,7 @@ public static class EmailTemplates
             <h1 style="font-size:18px; margin:0 0 12px;">{{e(greeting)}}</h1>
             <p>{{e(intro)}}</p>
             <p style="margin:24px 0;"><a class="btn" href="{{e(link)}}">{{e(buttonText)}}</a></p>
-            <p style="font-size:13px; color:#6c5a4e;">Se o botão não funcionar, copie este endereço no navegador:<br>{{e(link)}}</p>
+            <p style="font-size:13px; color:#6c5a4e; word-break:break-all;">Se o botão não funcionar, copie este endereço no navegador:<br>{{e(link)}}</p>
             <p style="font-size:13px; color:#6c5a4e;">{{e(footnote)}}</p>
             </div>
             </body>

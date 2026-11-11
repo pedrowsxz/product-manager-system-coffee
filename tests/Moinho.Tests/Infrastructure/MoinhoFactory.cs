@@ -33,6 +33,7 @@ public class MoinhoFactory(SqlServerFixture sql) : WebApplicationFactory<Program
         builder.UseSetting("Demo:EnableErrorSimulation", "true");
         builder.UseSetting("Demo:NightlyReset", "false");
         builder.UseSetting("RateLimits:EmailPermitLimit", RateLimit.ToString());
+        builder.UseSetting("RateLimits:DemoLoginPermitLimit", RateLimit.ToString());
         builder.UseSetting("Serilog:MinimumLevel:Default", "Warning");
         builder.ConfigureServices(services =>
         {

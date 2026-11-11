@@ -6,13 +6,13 @@
         <input asp-for="Name" class="form-control" />
         <span asp-validation-for="Name" class="text-danger small"></span>
     </div>
-    <div class="col-sm-6">
+    <div class="col-sm-5">
         <label asp-for="Sku" class="form-label"></label>
         <input asp-for="Sku" class="form-control text-uppercase sku" autocomplete="off" />
         <div class="form-text">Ex.: CAF-SMG-MD-GR-250. Salvo em maiúsculas.</div>
         <span asp-validation-for="Sku" class="text-danger small"></span>
     </div>
-    <div class="col-sm-3">
+    <div class="col-sm-4">
         <label asp-for="Price" class="form-label"></label>
         @* Text, not type="number": a number input posts "12.50", which pt-BR parsing would read as 1250. *@
         <input asp-for="Price" type="text" inputmode="decimal" class="form-control text-end" placeholder="0,00" />

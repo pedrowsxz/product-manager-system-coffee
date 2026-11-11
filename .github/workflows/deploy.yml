@@ -1,0 +1,26 @@
+# Manual deploy to the VPS over SSH (Actions tab -> Deploy -> Run workflow).
+# Secrets: DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY (private key) and DEPLOY_KNOWN_HOSTS
+# (output of `ssh-keyscan your-host`, checked once by hand, so the runner can't be fooled by a fake server).
+# Optional variables: DEPLOY_DIR (default /opt/moinho), COMPOSE_FILE (default compose.prod.yaml).
+name: Deploy
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull and restart on the server
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
+          DIR: ${{ vars.DEPLOY_DIR || '/opt/moinho' }}
+          COMPOSE_FILE: ${{ vars.COMPOSE_FILE || 'compose.prod.yaml' }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/id_deploy "$TARGET" \
+            "cd '$DIR' && git pull --ff-only && docker compose -f '$COMPOSE_FILE' up -d --build && docker image prune -f"

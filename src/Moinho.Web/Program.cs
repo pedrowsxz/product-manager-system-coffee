@@ -128,17 +128,17 @@ try
     // Limit those POSTs per client IP so the page can't be used to spam people or burn the email quota.
     builder.Services.AddRateLimiter(options =>
     {
-        var rateLimits = config.GetSection("RateLimits").Get<RateLimitOptions>() ?? new RateLimitOptions();
+        var limits = config.GetSection("RateLimits").Get<RateLimitOptions>() ?? new RateLimitOptions();
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-        options.AddPolicy(RateLimitPolicies.Email, context =>
+        options.AddPolicy(RateLimitPolicies.Email, context => PostsPerIp(context, limits.EmailPermitLimit, limits.EmailWindowMinutes));
+        options.AddPolicy(RateLimitPolicies.DemoLogin, context => PostsPerIp(context, limits.DemoLoginPermitLimit, limits.DemoLoginWindowMinutes));
+
+        // Counts POSTs per client IP in a fixed window; GETs (just viewing the form) are never limited.
+        static RateLimitPartition<string> PostsPerIp(HttpContext context, int permitLimit, int windowMinutes) =>
             HttpMethods.IsPost(context.Request.Method)
                 ? RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "desconhecido",
-                    _ => new FixedWindowRateLimiterOptions
-                    {
-                        PermitLimit = rateLimits.EmailPermitLimit,
-                        Window = TimeSpan.FromMinutes(rateLimits.EmailWindowMinutes),
-                    })
-                : RateLimitPartition.GetNoLimiter("get"));
+                    _ => new FixedWindowRateLimiterOptions { PermitLimit = permitLimit, Window = TimeSpan.FromMinutes(windowMinutes) })
+                : RateLimitPartition.GetNoLimiter("get");
     });
 
     // ---- MVC + Razor Pages ----
@@ -165,6 +165,11 @@ try
     builder.Services.AddScoped<Seeder>();
     builder.Services.AddScoped<ProductService>();
     builder.Services.AddScoped<StaffService>();
+    builder.Services.AddScoped<DemoReset>();
+    if (config.GetValue<bool>("Demo:NightlyReset"))
+    {
+        builder.Services.AddHostedService<DemoResetService>();
+    }
 
     var app = builder.Build();
 

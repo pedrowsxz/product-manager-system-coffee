@@ -92,3 +92,19 @@ Notes
   - an email failure writes one row that contains no link, token or password.
 - Checked on the Docker stack: simulate → TraceId on the page → the same row in SQL and on the Logs page.
 - The dev Docker database had to be recreated because the ErrorLogs column types changed. That is exactly the EnsureCreated limitation from ADR 0002.
+
+## Stage 6: Demo and wrap-up ✅
+
+- **Demo login:** `DemoController` (`POST /demo/entrar/{admin|equipe}`) with antiforgery and its own rate limit (`demo-login`, 10 per 10 min per IP). It only works with `Demo:Enabled` and only signs into `IsProtectedDemo` accounts. The login page shows both buttons and "Ou crie sua conta: você receberá um email de confirmação de verdade".
+- **Nightly reset:** `DemoReset` deletes every row in FK order with `ExecuteDeleteAsync` (no `DROP DATABASE`) and reseeds. `DemoResetService` (`BackgroundService`, `TimeProvider`) runs it at 04:00 São Paulo time when `Demo:NightlyReset` is on. The footer explains it.
+- Seeded staff now get a random password nobody knows, so they show as ordinary active accounts instead of "Convite pendente".
+- Visual fixes after reviewing the screenshots: SKUs and badges no longer wrap, the email's fallback link wraps, and the price column is wider.
+- **CI:** `.github/workflows/ci.yml` (checkout v7, setup-dotnet v6 with global.json, restore, build, test with Testcontainers, `docker compose build`).
+- **Deploy:**
+  - `compose.prod.yaml` (layout A: Caddy + SQL Server Express with a memory cap, only 80/443, fixed subnet trusted for forwarded headers, keys volume);
+  - `compose.shared.yaml` (layout B: external `proxy` network, unique `moinho-web` alias);
+  - `deploy/Caddyfile`, `deploy/.env.production.example`, and a manual SSH deploy workflow that pins `known_hosts`;
+  - `docs/DEPLOY.md` (pt-BR).
+- **Docs:** README (pt-BR, requirement and job tables, Mermaid flow, the disabled Identity routes, known limits, the Reflexão left for the author with 5 questions), ADRs 0001–0006, `docs/STUDY_GUIDE.md` (pt-BR, line-by-line core logic, demo script, 17 interview questions).
+- **Screenshots** captured with headless Chromium (Playwright 1.64.0 from the scratchpad, reusing an already-installed browser build; nothing added to the repo): login, products, validation, panel, team, error page, logs, Mailpit email, dark mode, phone.
+- Checked: a fresh `git clone` + `docker compose up --build` serves the app with CSS (run on alternate ports because this machine already uses 8080/1433). 84 tests green, 0 build warnings.

@@ -1,0 +1,78 @@
+# Layout A: standalone on one VPS. This app runs its own SQL Server and Caddy (HTTPS).
+#   cp deploy/.env.production.example .env   # then edit it
+#   docker compose -f compose.prod.yaml up -d --build
+# Only ports 80 and 443 are exposed; SQL Server and the app are reachable only inside the network.
+name: moinho
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Express # free edition: 10 GB per database, plenty for this app
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?set MSSQL_SA_PASSWORD in .env}
+      MSSQL_MEMORY_LIMIT_MB: "1536"
+    mem_limit: 2g # SQL Server needs about 2 GB; leave room for the app on a 4 GB VPS
+    volumes:
+      - sqldata:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' -b -o /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+    restart: unless-stopped
+
+  web:
+    build: .
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: "Server=sqlserver,1433;Database=Moinho;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
+      Email__Host: ${SMTP_HOST:?set SMTP_HOST in .env}
+      Email__Port: ${SMTP_PORT:-587}
+      Email__User: ${SMTP_USER:-}
+      Email__Password: ${SMTP_PASSWORD:-}
+      Email__From: ${EMAIL_FROM:?set EMAIL_FROM in .env}
+      Email__UseStartTls: "true"
+      Seed__AdminEmail: ${ADMIN_EMAIL:?set ADMIN_EMAIL in .env}
+      Seed__AdminPassword: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+      Demo__Enabled: ${DEMO_ENABLED:-true}
+      Demo__EnableErrorSimulation: ${DEMO_ENABLED:-true}
+      Demo__NightlyReset: ${DEMO_ENABLED:-true}
+      DataProtection__KeysPath: /keys
+      # Trust X-Forwarded-* only from Caddy's network (fixed below), so email links use the public host.
+      ForwardedHeaders__KnownNetworks__0: 172.30.0.0/24
+    volumes:
+      - keys:/keys # Data Protection keys: logins, antiforgery and emailed links survive redeploys
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.11
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data # certificates
+      - caddy_config:/config
+    depends_on:
+      - web
+    restart: unless-stopped
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+
+volumes:
+  sqldata:
+  keys:
+  caddy_data:
+  caddy_config:

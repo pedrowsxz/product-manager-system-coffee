@@ -50,9 +50,10 @@ public class Seeder(
         await EnsureUserAsync(new ApplicationUser { FullName = "Admin Demonstração", Email = DemoAccounts.AdminEmail, EmailConfirmed = true, CreatedAt = now, IsProtectedDemo = true }, Roles.Admin);
         await EnsureUserAsync(new ApplicationUser { FullName = "Equipe Demonstração", Email = DemoAccounts.StaffEmail, EmailConfirmed = true, CreatedAt = now, IsProtectedDemo = true }, Roles.Staff);
 
+        // Filler accounts: a random password nobody knows, so they look like normal staff in the list.
         foreach (var (user, role, inactive) in staff)
         {
-            await EnsureUserAsync(user, role, inactive: inactive);
+            await EnsureUserAsync(user, role, password: $"{Guid.NewGuid():N}Aa1!", inactive: inactive);
         }
 
         if (!await db.Products.AnyAsync())

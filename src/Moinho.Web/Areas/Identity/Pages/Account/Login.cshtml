@@ -5,6 +5,24 @@
 }
 <h1>Entrar</h1>
 
+@if (Model.DemoEnabled)
+{
+    <div class="demo-box">
+        <div class="fw-semibold mb-1">Quer só conhecer o sistema?</div>
+        <p class="small text-body-secondary mb-2">Entre com uma conta de demonstração, sem senha.</p>
+        <div class="d-grid gap-2 d-sm-flex">
+            <form method="post" asp-area="" asp-controller="Demo" asp-action="SignIn" asp-route-account="admin" class="flex-fill">
+                <button type="submit" class="btn btn-primary w-100">Entrar como Admin (demo)</button>
+            </form>
+            <form method="post" asp-area="" asp-controller="Demo" asp-action="SignIn" asp-route-account="equipe" class="flex-fill">
+                <button type="submit" class="btn btn-outline-primary w-100">Entrar como Equipe (demo)</button>
+            </form>
+        </div>
+        <p class="small mt-2 mb-0">Ou <a asp-page="./Register">crie sua conta</a>: você receberá um email de confirmação de verdade.</p>
+    </div>
+    <div class="divider-text">ou entre com email e senha</div>
+}
+
 <form method="post" asp-route-returnUrl="@Model.ReturnUrl" novalidate>
     <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
     <div class="mb-3">

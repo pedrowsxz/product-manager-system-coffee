@@ -1,0 +1,39 @@
+# Layout B: shared VPS. Only the app runs here; it joins an existing Docker network ("proxy")
+# where one SQL Server and one Caddy already serve several portfolio apps.
+#   docker compose -f compose.shared.yaml up -d --build
+# See docs/DEPLOY.md for the database login and the Caddy site block.
+name: moinho
+
+services:
+  web:
+    build: .
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: ${CONNECTION_STRING:?set CONNECTION_STRING in .env}
+      Email__Host: ${SMTP_HOST:?set SMTP_HOST in .env}
+      Email__Port: ${SMTP_PORT:-587}
+      Email__User: ${SMTP_USER:-}
+      Email__Password: ${SMTP_PASSWORD:-}
+      Email__From: ${EMAIL_FROM:?set EMAIL_FROM in .env}
+      Email__UseStartTls: "true"
+      Seed__AdminEmail: ${ADMIN_EMAIL:?set ADMIN_EMAIL in .env}
+      Seed__AdminPassword: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+      Demo__Enabled: ${DEMO_ENABLED:-true}
+      Demo__EnableErrorSimulation: ${DEMO_ENABLED:-true}
+      Demo__NightlyReset: ${DEMO_ENABLED:-true}
+      DataProtection__KeysPath: /keys
+      ForwardedHeaders__KnownNetworks__0: ${PROXY_NETWORK_CIDR:?set PROXY_NETWORK_CIDR in .env}
+    volumes:
+      - keys:/keys
+    networks:
+      proxy:
+        aliases:
+          - moinho-web # unique name on the shared network; other apps may also have a "web" service
+    restart: unless-stopped
+
+networks:
+  proxy:
+    external: true
+
+volumes:
+  keys:

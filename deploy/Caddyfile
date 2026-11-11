@@ -1,0 +1,6 @@
+# Caddy gets and renews the HTTPS certificate for $DOMAIN automatically (Let's Encrypt).
+# reverse_proxy sends X-Forwarded-For/Proto/Host, which the app trusts from this network only.
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:8080
+}

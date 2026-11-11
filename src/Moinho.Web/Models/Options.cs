@@ -29,4 +29,8 @@ public class RateLimitOptions
     // POSTs that send email (register, forgot password, resend confirmation, ...) per IP per window.
     public int EmailPermitLimit { get; set; } = 5;
     public int EmailWindowMinutes { get; set; } = 15;
+
+    // Demo sign-in POSTs per IP per window.
+    public int DemoLoginPermitLimit { get; set; } = 10;
+    public int DemoLoginWindowMinutes { get; set; } = 10;
 }
