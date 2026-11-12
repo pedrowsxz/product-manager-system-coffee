@@ -249,14 +249,3 @@ Para estudar o código em ordem: [docs/STUDY_GUIDE.md](docs/STUDY_GUIDE.md).
 
 ---
 
-## Reflexão
-
-> **A ser escrita pelo autor, com as próprias palavras.** O desafio pede isso explicitamente, então esta seção foi deixada em branco de propósito.
-
-Perguntas para guiar:
-
-1. Qual parte do Identity foi mais difícil de entender (cookies, perfis, tokens, security stamp) e o que fez a ficha cair?
-2. Por que o enunciado pede `EnsureCreated`, e o que você faria diferente num sistema que vai para produção de verdade?
-3. Qual regra da área Admin (auto-proteção, último admin, contas protegidas) você acha mais importante, e que bug real ela evita?
-4. O que você aprendeu sobre cultura e formatos (o preço "12.50" virando 1250) que não esperava?
-5. Se tivesse mais uma semana, o que melhoraria primeiro e por quê?
